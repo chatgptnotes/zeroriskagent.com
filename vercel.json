@@ -5,5 +5,11 @@
   "devCommand": "cd apps/dashboard && pnpm dev",
   "installCommand": "pnpm install",
   "framework": "vite",
-  "regions": ["sin1"]
+  "regions": ["sin1"],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
