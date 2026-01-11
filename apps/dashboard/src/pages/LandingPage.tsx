@@ -68,11 +68,11 @@ export default function LandingPage() {
             {/* Atomic Animation with Title */}
             <div className="flex flex-col items-center justify-center mb-12">
               <AtomicAnimation />
-              <h1 className="text-6xl md:text-7xl lg:text-8xl font-black mt-8 leading-tight">
+              <h1 className="text-6xl md:text-7xl lg:text-8xl font-black mt-8 leading-tight pb-4">
                 <span className="block bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">
                   Zero Risk
                 </span>
-                <span className="block mt-2 bg-gradient-to-r from-red-400 via-orange-400 to-red-500 bg-clip-text text-transparent animate-gradient">
+                <span className="block mt-2 pb-2 bg-gradient-to-r from-red-400 via-orange-400 to-red-500 bg-clip-text text-transparent animate-gradient">
                   Agent
                 </span>
               </h1>
