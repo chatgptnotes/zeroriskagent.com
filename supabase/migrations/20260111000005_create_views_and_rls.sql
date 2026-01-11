@@ -30,11 +30,11 @@ SELECT
   COALESCE(SUM(CASE WHEN c.claim_status IN ('denied', 'appealed') THEN c.outstanding_amount ELSE 0 END), 0) as total_denied_amount,
   COALESCE(SUM(CASE WHEN c.claim_status IN ('denied', 'appealed') THEN c.outstanding_amount ELSE 0 END), 0) as recoverable_amount,
 
-  -- Aging
-  COALESCE(AVG(c.aged_days), 0)::int as avg_aged_days,
-  COUNT(CASE WHEN c.aged_days > 30 AND c.claim_status NOT IN ('recovered', 'written_off') THEN 1 END) as aged_over_30_days,
-  COUNT(CASE WHEN c.aged_days > 60 AND c.claim_status NOT IN ('recovered', 'written_off') THEN 1 END) as aged_over_60_days,
-  COUNT(CASE WHEN c.aged_days > 90 AND c.claim_status NOT IN ('recovered', 'written_off') THEN 1 END) as aged_over_90_days,
+  -- Aging (calculated dynamically)
+  COALESCE(AVG(EXTRACT(DAY FROM (CURRENT_DATE - c.submission_date::date))::int), 0)::int as avg_aged_days,
+  COUNT(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - c.submission_date::date))::int > 30 AND c.claim_status NOT IN ('recovered', 'written_off') THEN 1 END) as aged_over_30_days,
+  COUNT(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - c.submission_date::date))::int > 60 AND c.claim_status NOT IN ('recovered', 'written_off') THEN 1 END) as aged_over_60_days,
+  COUNT(CASE WHEN EXTRACT(DAY FROM (CURRENT_DATE - c.submission_date::date))::int > 90 AND c.claim_status NOT IN ('recovered', 'written_off') THEN 1 END) as aged_over_90_days,
 
   -- Revenue Share (Gain-Share Model)
   COALESCE((SELECT SUM(agent_fee_amount) FROM recovery_transactions WHERE hospital_id = h.id), 0) as total_agent_fees,
@@ -82,7 +82,7 @@ SELECT
   COUNT(CASE WHEN c.claim_status = 'denied' THEN 1 END) as denied_claims,
   COALESCE(SUM(c.claimed_amount), 0) as total_claimed_amount,
   COALESCE(SUM(CASE WHEN c.claim_status = 'denied' THEN c.outstanding_amount END), 0) as total_denied_amount,
-  COALESCE(AVG(c.aged_days), 0)::int as avg_processing_days,
+  COALESCE(AVG(EXTRACT(DAY FROM (CURRENT_DATE - c.submission_date::date))::int), 0)::int as avg_processing_days,
   ROUND(
     CASE
       WHEN COUNT(c.id) > 0 THEN (COUNT(CASE WHEN c.claim_status = 'denied' THEN 1 END)::decimal / COUNT(c.id)::decimal * 100)
@@ -119,7 +119,7 @@ SELECT
   cd.recovery_probability,
   cd.estimated_recovery_amount,
   cd.recovery_effort_score,
-  c.aged_days,
+  EXTRACT(DAY FROM (CURRENT_DATE - c.submission_date::date))::int as aged_days,
   -- Priority Score: High amount, high probability, low effort
   (
     (cd.denial_amount / 100000) * 0.4 +  -- Amount factor (normalized to lakhs)

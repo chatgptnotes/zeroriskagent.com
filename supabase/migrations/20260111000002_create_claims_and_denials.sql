@@ -56,11 +56,6 @@ CREATE TABLE claims (
   last_status_update timestamp DEFAULT now(),
   payment_due_date date,
 
-  -- Calculated field for aging
-  aged_days int GENERATED ALWAYS AS (
-    EXTRACT(DAY FROM (now() - submission_date))::int
-  ) STORED,
-
   -- Metadata
   created_at timestamp DEFAULT now(),
   updated_at timestamp DEFAULT now(),
@@ -75,7 +70,6 @@ CREATE TABLE claims (
 CREATE INDEX idx_claims_hospital_status ON claims(hospital_id, claim_status);
 CREATE INDEX idx_claims_payer_status ON claims(payer_id, claim_status);
 CREATE INDEX idx_claims_submission_date ON claims(submission_date DESC);
-CREATE INDEX idx_claims_aged_days ON claims(aged_days DESC) WHERE claim_status IN ('submitted', 'under_review', 'denied', 'appealed');
 CREATE INDEX idx_claims_status ON claims(claim_status);
 CREATE INDEX idx_claims_claim_number ON claims(claim_number);
 CREATE INDEX idx_claims_external_id ON claims(external_claim_id) WHERE external_claim_id IS NOT NULL;
@@ -180,7 +174,7 @@ COMMENT ON TABLE claims IS 'Core table tracking all insurance claims from submis
 COMMENT ON TABLE claim_denials IS 'Tracks denial details and AI-powered recovery analysis';
 
 COMMENT ON COLUMN claims.patient_id_hash IS 'SHA-256 hash of patient ID for privacy compliance';
-COMMENT ON COLUMN claims.aged_days IS 'Automatically calculated number of days since submission';
+-- Note: aged_days is calculated dynamically in queries as: EXTRACT(DAY FROM (CURRENT_DATE - submission_date::date))::int
 COMMENT ON COLUMN claims.outstanding_amount IS 'Automatically calculated as claimed_amount - paid_amount';
 COMMENT ON COLUMN claim_denials.recovery_probability IS 'AI-predicted probability of successful recovery (0.00 to 1.00)';
 COMMENT ON COLUMN claim_denials.recovery_effort_score IS 'Effort required for recovery (1=easy, 10=very difficult)';
