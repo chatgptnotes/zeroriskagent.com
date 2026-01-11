@@ -5,9 +5,5 @@
   "devCommand": "cd apps/dashboard && pnpm dev",
   "installCommand": "pnpm install",
   "framework": "vite",
-  "regions": ["sin1"],
-  "env": {
-    "VITE_SUPABASE_URL": "@supabase_url",
-    "VITE_SUPABASE_ANON_KEY": "@supabase_anon_key"
-  }
+  "regions": ["sin1"]
 }
