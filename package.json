@@ -1,0 +1,31 @@
+{
+  "name": "zeroriskagent.com",
+  "version": "1.0.0",
+  "description": "Autonomous Healthcare Revenue Recovery Agent for Indian Hospitals",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter dashboard dev",
+    "agent:dev": "pnpm --filter agent dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint:fix",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "keywords": [
+    "healthcare",
+    "revenue-recovery",
+    "claims-management",
+    "ESIC",
+    "CGHS",
+    "ECHS",
+    "AI-agent"
+  ],
+  "author": "Zero Risk Agent",
+  "license": "PROPRIETARY",
+  "packageManager": "pnpm@10.11.1",
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3"
+  }
+}
