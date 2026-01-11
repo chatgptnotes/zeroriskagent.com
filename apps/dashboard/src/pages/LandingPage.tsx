@@ -5,9 +5,9 @@ export default function LandingPage() {
 
   const calculateROI = () => {
     const denied = parseFloat(deniedAmount) || 0
-    const recoveryRate = 0.60 // 60% recovery rate
+    const recoveryRate = 0.60
     const recovered = denied * recoveryRate
-    const agentFee = recovered * 0.25 // 25% agent fee
+    const agentFee = recovered * 0.25
     const hospitalNet = recovered - agentFee
     return { recovered, agentFee, hospitalNet }
   }
@@ -23,26 +23,38 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+
       {/* Navigation */}
-      <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 z-50">
+      <nav className="fixed top-0 w-full bg-slate-900/50 backdrop-blur-xl border-b border-white/10 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-3">
-              <span className="material-icon text-primary-600" style={{ fontSize: '32px' }}>local_hospital</span>
+              <div className="p-2 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg">
+                <span className="material-icon text-white" style={{ fontSize: '28px' }}>local_hospital</span>
+              </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">Zero Risk Agent</h1>
-                <p className="text-xs text-gray-500">Healthcare Revenue Recovery</p>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Zero Risk Agent</h1>
+                <p className="text-xs text-gray-400">AI Revenue Recovery</p>
               </div>
             </div>
-            <div className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-sm text-gray-600 hover:text-primary-600 transition">Features</a>
-              <a href="#how-it-works" className="text-sm text-gray-600 hover:text-primary-600 transition">How It Works</a>
-              <a href="#pricing" className="text-sm text-gray-600 hover:text-primary-600 transition">Pricing</a>
-              <a href="#roi" className="text-sm text-gray-600 hover:text-primary-600 transition">ROI Calculator</a>
-              <a href="/dashboard" className="btn-primary text-sm">
-                <span className="material-icon" style={{ fontSize: '18px' }}>dashboard</span>
-                Dashboard
+            <div className="hidden md:flex items-center gap-8">
+              <a href="#features" className="text-sm text-gray-300 hover:text-white transition-colors duration-200">Features</a>
+              <a href="#how-it-works" className="text-sm text-gray-300 hover:text-white transition-colors duration-200">How It Works</a>
+              <a href="#pricing" className="text-sm text-gray-300 hover:text-white transition-colors duration-200">Pricing</a>
+              <a href="#roi" className="text-sm text-gray-300 hover:text-white transition-colors duration-200">ROI Calculator</a>
+              <a href="/dashboard" className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 to-purple-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-200"></div>
+                <div className="relative px-6 py-2.5 bg-slate-900 rounded-lg flex items-center gap-2">
+                  <span className="material-icon" style={{ fontSize: '18px' }}>dashboard</span>
+                  <span className="text-sm font-medium">Dashboard</span>
+                </div>
               </a>
             </div>
           </div>
@@ -50,278 +62,330 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-50 via-white to-purple-50">
+      <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-primary-100 text-primary-700 px-4 py-2 rounded-full text-sm font-medium mb-6">
-              <span className="material-icon" style={{ fontSize: '18px' }}>auto_awesome</span>
-              AI-Powered Revenue Recovery
+          <div className="text-center max-w-5xl mx-auto relative z-10">
+            {/* Atomic Animation with Title */}
+            <div className="flex flex-col items-center justify-center mb-12">
+              <AtomicAnimation />
+              <h1 className="text-6xl md:text-7xl lg:text-8xl font-black mt-8 leading-tight">
+                <span className="block bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">
+                  Zero Risk
+                </span>
+                <span className="block mt-2 bg-gradient-to-r from-primary-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
+                  Agent
+                </span>
+              </h1>
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Recover Your Denied
-              <span className="bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent"> Insurance Claims </span>
-              Automatically
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              Zero Risk Agent uses advanced AI to fight denied ESIC, CGHS, and ECHS claims, recovering millions in lost revenue for Indian hospitals. You only pay when we win.
+
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 px-5 py-2.5 rounded-full text-sm font-medium mb-8 hover:bg-white/15 transition-all duration-300 cursor-pointer group">
+              <span className="material-icon text-primary-400 group-hover:rotate-12 transition-transform duration-300" style={{ fontSize: '20px' }}>auto_awesome</span>
+              <span className="bg-gradient-to-r from-primary-400 to-purple-400 bg-clip-text text-transparent">Powered by Advanced AI</span>
+            </div>
+
+            {/* Subtitle */}
+            <p className="text-xl md:text-2xl text-gray-300 mb-12 leading-relaxed max-w-4xl mx-auto">
+              AI-powered platform recovering <span className="text-primary-400 font-semibold">millions in denied claims</span> from ESIC, CGHS, and ECHS.
+              <span className="block mt-2 text-lg text-gray-400">You only pay when we win.</span>
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button className="bg-primary-600 text-white px-8 py-4 rounded-lg hover:bg-primary-700 transition-all duration-200 flex items-center justify-center gap-2 text-lg font-semibold shadow-lg hover:shadow-xl">
-                <span className="material-icon">rocket_launch</span>
-                Get Started Free
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+              <button className="group relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 via-purple-600 to-pink-600 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition duration-300 animate-gradient"></div>
+                <div className="relative px-8 py-4 bg-gradient-to-r from-primary-600 to-purple-600 rounded-xl flex items-center justify-center gap-3 text-lg font-bold shadow-2xl group-hover:scale-105 transition-transform duration-200">
+                  <span className="material-icon group-hover:rotate-12 transition-transform duration-300">rocket_launch</span>
+                  <span>Start Recovering Now</span>
+                </div>
               </button>
-              <button className="bg-white text-gray-900 px-8 py-4 rounded-lg hover:bg-gray-50 transition-all duration-200 flex items-center justify-center gap-2 text-lg font-semibold border-2 border-gray-200">
-                <span className="material-icon">play_circle</span>
-                Watch Demo
+
+              <button className="relative px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center gap-3 text-lg font-semibold hover:bg-white/15 transition-all duration-200 group">
+                <span className="material-icon group-hover:scale-110 transition-transform duration-300">play_circle</span>
+                <span>Watch Demo</span>
               </button>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
-              <StatCard icon="attach_money" value="₹50Cr+" label="Total Recovered" color="green" />
-              <StatCard icon="trending_up" value="65%" label="Avg Success Rate" color="blue" />
-              <StatCard icon="schedule" value="45 Days" label="Avg Recovery Time" color="purple" />
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <ModernStatCard
+                icon="attach_money"
+                value="₹50Cr+"
+                label="Total Recovered"
+                gradient="from-green-500 to-emerald-500"
+              />
+              <ModernStatCard
+                icon="trending_up"
+                value="65%"
+                label="Success Rate"
+                gradient="from-blue-500 to-cyan-500"
+              />
+              <ModernStatCard
+                icon="schedule"
+                value="45 Days"
+                label="Avg Recovery Time"
+                gradient="from-purple-500 to-pink-500"
+              />
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="features" className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose Zero Risk Agent?</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Powered by cutting-edge AI, designed specifically for Indian healthcare systems
+          <div className="text-center mb-16 relative z-10">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Why Choose Us?
+            </h2>
+            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+              Built specifically for Indian healthcare, powered by cutting-edge AI
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <FeatureCard
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
+            <GlassCard
               icon="psychology"
               title="AI-Powered Appeals"
-              description="Our advanced AI analyzes denial reasons, reviews medical records, and generates compelling appeals citing specific policy clauses."
-              color="blue"
+              description="Advanced AI analyzes denials, reviews records, and generates compelling appeals citing specific policy clauses."
+              gradient="from-blue-500 to-cyan-500"
             />
-            <FeatureCard
+            <GlassCard
               icon="security"
               title="Zero Risk Pricing"
-              description="No upfront costs. No monthly fees. You only pay 25% of what we successfully recover. If we don't win, you don't pay."
-              color="green"
+              description="No upfront costs. No monthly fees. Pay only 25% of what we recover. If we don't win, you don't pay."
+              gradient="from-green-500 to-emerald-500"
             />
-            <FeatureCard
+            <GlassCard
               icon="account_balance"
               title="Multi-Payer Support"
-              description="Specialized workflows for ESIC, CGHS, ECHS, and private insurers. We know each payer's unique requirements."
-              color="purple"
+              description="Specialized workflows for ESIC, CGHS, ECHS, and private insurers. We know each payer's requirements."
+              gradient="from-purple-500 to-pink-500"
             />
-            <FeatureCard
+            <GlassCard
               icon="speed"
               title="Automated Workflows"
-              description="From denial detection to appeal submission, our platform handles everything automatically, saving your team countless hours."
-              color="orange"
+              description="From denial detection to appeal submission, everything happens automatically, saving countless hours."
+              gradient="from-orange-500 to-red-500"
             />
-            <FeatureCard
+            <GlassCard
               icon="analytics"
               title="Real-Time Dashboard"
-              description="Track every claim, denial, and recovery in real-time. Get actionable insights with comprehensive analytics."
-              color="pink"
+              description="Track every claim, denial, and recovery in real-time with comprehensive analytics and insights."
+              gradient="from-pink-500 to-rose-500"
             />
-            <FeatureCard
+            <GlassCard
               icon="school"
               title="Learning System"
               description="Our AI learns from every claim, building a knowledge graph that improves success rates over time."
-              color="indigo"
+              gradient="from-indigo-500 to-purple-500"
             />
           </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <section id="how-it-works" className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">How It Works</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <div className="text-center mb-16 relative z-10">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              How It Works
+            </h2>
+            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
               Four simple steps to start recovering your lost revenue
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <StepCard
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
+            <StepCardModern
               number="1"
               icon="upload"
               title="Import Claims"
-              description="Connect your billing system or upload claims via CSV. We handle ESIC, CGHS, and ECHS formats."
+              description="Connect your billing system or upload claims. We handle all Indian payer formats."
             />
-            <StepCard
+            <StepCardModern
               number="2"
               icon="search"
               title="AI Analysis"
-              description="Our AI automatically detects denials, analyzes reasons, and scores recovery probability."
+              description="Our AI detects denials, analyzes reasons, and scores recovery probability instantly."
             />
-            <StepCard
+            <StepCardModern
               number="3"
               icon="edit_document"
               title="Generate Appeals"
-              description="AI drafts compelling appeals with medical justification and policy references specific to each payer."
+              description="AI drafts compelling appeals with medical justification and policy references."
             />
-            <StepCard
+            <StepCardModern
               number="4"
               icon="payments"
               title="Get Paid"
-              description="We handle submission and follow-up. When payment arrives, we split: 75% to you, 25% to us."
+              description="We handle submission and follow-up. Split: 75% to you, 25% to us."
             />
           </div>
         </div>
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="pricing" className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Transparent Pricing</h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <div className="text-center mb-16 relative z-10">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Transparent Pricing
+            </h2>
+            <p className="text-xl text-gray-400">
               Only pay when we win. No hidden fees. No surprises.
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-primary-50 to-purple-50 rounded-2xl p-12 border-2 border-primary-200 shadow-xl">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-3xl font-bold text-gray-900 mb-2">Gain-Share Model</h3>
-                <p className="text-lg text-gray-600">Performance-based pricing aligned with your success</p>
-              </div>
-              <div className="hidden md:block">
-                <span className="material-icon text-primary-600" style={{ fontSize: '64px' }}>handshake</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <PricingFeature icon="block" title="₹0 Upfront" description="No setup fees or monthly charges" />
-              <PricingFeature icon="percent" title="25% Fee" description="Only on successfully recovered amounts" />
-              <PricingFeature icon="currency_rupee" title="₹5,000 Min" description="We only pursue viable claims" />
-            </div>
-
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
-              <h4 className="font-semibold text-gray-900 mb-4">Example Calculation:</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Denied claim amount:</span>
-                  <span className="font-medium">₹1,00,000</span>
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 via-purple-600 to-pink-600 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition duration-300"></div>
+            <div className="relative bg-slate-800/50 backdrop-blur-xl rounded-3xl p-12 border border-white/10">
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Gain-Share Model</h3>
+                  <p className="text-lg text-gray-400">Performance-based pricing aligned with your success</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Successfully recovered (60%):</span>
-                  <span className="font-medium">₹60,000</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Our fee (25%):</span>
-                  <span className="font-medium text-primary-600">₹15,000</span>
-                </div>
-                <div className="flex justify-between pt-2 border-t-2 border-gray-200">
-                  <span className="font-semibold text-gray-900">You receive:</span>
-                  <span className="font-bold text-green-600 text-lg">₹45,000</span>
+                <div className="hidden md:block">
+                  <span className="material-icon text-primary-400" style={{ fontSize: '80px' }}>handshake</span>
                 </div>
               </div>
-            </div>
 
-            <p className="text-center text-sm text-gray-600 mt-6">
-              If we don't recover the claim, you pay nothing. Zero risk to your hospital.
-            </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <PricingFeatureModern icon="block" title="₹0 Upfront" description="No setup fees or monthly charges" />
+                <PricingFeatureModern icon="percent" title="25% Fee" description="Only on recovered amounts" />
+                <PricingFeatureModern icon="currency_rupee" title="₹5,000 Min" description="We pursue viable claims" />
+              </div>
+
+              <div className="bg-slate-900/50 rounded-2xl p-8 border border-white/10">
+                <h4 className="font-semibold text-xl mb-6 text-gray-200">Example Calculation:</h4>
+                <div className="space-y-4 text-base">
+                  <div className="flex justify-between items-center pb-3 border-b border-white/10">
+                    <span className="text-gray-400">Denied claim amount:</span>
+                    <span className="font-semibold text-white text-lg">₹1,00,000</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-white/10">
+                    <span className="text-gray-400">Successfully recovered (60%):</span>
+                    <span className="font-semibold text-white text-lg">₹60,000</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-white/10">
+                    <span className="text-gray-400">Our fee (25%):</span>
+                    <span className="font-semibold text-primary-400 text-lg">₹15,000</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-3">
+                    <span className="font-bold text-white text-lg">You receive:</span>
+                    <span className="font-bold text-green-400 text-2xl">₹45,000</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-center text-sm text-gray-400 mt-8">
+                If we don't recover the claim, you pay nothing. Zero risk to your hospital.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ROI Calculator */}
-      <section id="roi" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <section id="roi" className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Calculate Your Potential Recovery</h2>
-            <p className="text-xl text-gray-600">
-              See how much you could recover from your denied claims
+          <div className="text-center mb-12 relative z-10">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Calculate Your Recovery
+            </h2>
+            <p className="text-xl text-gray-400">
+              See how much you could recover from denied claims
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
-            <div className="mb-8">
-              <label className="label text-lg">Your Total Denied Claims Amount</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">₹</span>
-                <input
-                  type="number"
-                  value={deniedAmount}
-                  onChange={(e) => setDeniedAmount(e.target.value)}
-                  className="input text-2xl font-semibold pl-8 py-4"
-                  placeholder="1000000"
-                />
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-8 border-2 border-green-200">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <ROIMetric
-                  label="Estimated Recovery"
-                  value={formatCurrency(roi.recovered)}
-                  sublabel="at 60% success rate"
-                  icon="trending_up"
-                  color="green"
-                />
-                <ROIMetric
-                  label="Our Fee"
-                  value={formatCurrency(roi.agentFee)}
-                  sublabel="25% of recovery"
-                  icon="receipt"
-                  color="blue"
-                />
-                <ROIMetric
-                  label="Your Net Gain"
-                  value={formatCurrency(roi.hospitalNet)}
-                  sublabel="money in your account"
-                  icon="account_balance_wallet"
-                  color="purple"
-                />
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition duration-300"></div>
+            <div className="relative bg-slate-800/50 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
+              <div className="mb-8">
+                <label className="label text-lg text-gray-300 mb-3 block">Your Total Denied Claims Amount</label>
+                <div className="relative">
+                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 text-2xl font-bold">₹</span>
+                  <input
+                    type="number"
+                    value={deniedAmount}
+                    onChange={(e) => setDeniedAmount(e.target.value)}
+                    className="w-full bg-slate-900/50 border border-white/20 text-white text-3xl font-bold pl-12 pr-6 py-5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                    placeholder="1000000"
+                  />
+                </div>
               </div>
 
-              <div className="mt-6 pt-6 border-t border-green-200 text-center">
-                <p className="text-sm text-gray-600 mb-4">
-                  Based on our average 60% recovery rate across 500+ hospitals
-                </p>
-                <button className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-all duration-200 flex items-center justify-center gap-2 mx-auto font-semibold">
-                  <span className="material-icon">rocket_launch</span>
-                  Start Recovering Today
-                </button>
+              <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 rounded-2xl p-8 border border-green-500/20">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <ROIMetricModern
+                    label="Estimated Recovery"
+                    value={formatCurrency(roi.recovered)}
+                    sublabel="at 60% success rate"
+                    icon="trending_up"
+                    color="green"
+                  />
+                  <ROIMetricModern
+                    label="Our Fee"
+                    value={formatCurrency(roi.agentFee)}
+                    sublabel="25% of recovery"
+                    icon="receipt"
+                    color="blue"
+                  />
+                  <ROIMetricModern
+                    label="Your Net Gain"
+                    value={formatCurrency(roi.hospitalNet)}
+                    sublabel="in your account"
+                    icon="account_balance_wallet"
+                    color="purple"
+                  />
+                </div>
+
+                <div className="pt-6 border-t border-green-500/20 text-center">
+                  <p className="text-sm text-gray-400 mb-6">
+                    Based on our average 60% recovery rate across 500+ hospitals
+                  </p>
+                  <button className="group relative w-full sm:w-auto">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-200"></div>
+                    <div className="relative px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl flex items-center justify-center gap-3 font-bold group-hover:scale-105 transition-transform duration-200">
+                      <span className="material-icon">rocket_launch</span>
+                      <span>Start Recovering Today</span>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Social Proof */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      {/* Testimonials */}
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Trusted by Leading Hospitals</h2>
-            <p className="text-xl text-gray-600">
+          <div className="text-center mb-16 relative z-10">
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Trusted by Leading Hospitals
+            </h2>
+            <p className="text-xl text-gray-400">
               Join hundreds of hospitals already recovering millions
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <TestimonialCard
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+            <TestimonialCardModern
               hospital="Hope Hospital, Mumbai"
-              quote="Zero Risk Agent recovered ₹45 lakhs in denied ESIC claims in just 3 months. The AI-generated appeals are incredibly detailed and cite exact policy clauses."
+              quote="Zero Risk Agent recovered ₹45 lakhs in denied ESIC claims in just 3 months. The AI-generated appeals are incredibly detailed."
               name="Dr. Rajesh Kumar"
               role="Medical Director"
             />
-            <TestimonialCard
+            <TestimonialCardModern
               hospital="City Care Hospital, Delhi"
-              quote="The gain-share model is brilliant. No upfront cost, and we only pay when they succeed. They've recovered 62% of our CGHS denials so far."
+              quote="The gain-share model is brilliant. No upfront cost, and we only pay when they succeed. 62% recovery rate on CGHS denials."
               name="Mrs. Priya Sharma"
               role="Chief Financial Officer"
             />
-            <TestimonialCard
+            <TestimonialCardModern
               hospital="Metro Clinic, Bangalore"
-              quote="The dashboard gives us complete visibility into every claim. The AI is learning our patterns and getting better every month. Highly recommended."
+              quote="The dashboard gives complete visibility. The AI is learning our patterns and getting better every month. Highly recommended."
               name="Dr. Amit Patel"
               role="Hospital Administrator"
             />
@@ -329,79 +393,89 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary-600 to-purple-600">
-        <div className="max-w-4xl mx-auto text-center text-white">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Ready to Recover Your Lost Revenue?
-          </h2>
-          <p className="text-xl mb-8 opacity-90">
-            Start with zero risk. We only win when you win.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-primary-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition-all duration-200 flex items-center justify-center gap-2 text-lg font-semibold shadow-lg">
-              <span className="material-icon">contact_mail</span>
-              Schedule Demo
-            </button>
-            <button className="bg-transparent text-white px-8 py-4 rounded-lg hover:bg-white/10 transition-all duration-200 flex items-center justify-center gap-2 text-lg font-semibold border-2 border-white">
-              <span className="material-icon">call</span>
-              Call Us: +91-22-12345678
-            </button>
+      {/* Final CTA */}
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 via-purple-600 to-pink-600 rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition duration-300"></div>
+            <div className="relative bg-slate-800/50 backdrop-blur-xl rounded-3xl p-16 border border-white/10">
+              <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                Ready to Recover?
+              </h2>
+              <p className="text-2xl mb-10 text-gray-300">
+                Start with zero risk. We only win when you win.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button className="group relative">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-200"></div>
+                  <div className="relative px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl flex items-center justify-center gap-3 text-lg font-bold group-hover:scale-105 transition-transform duration-200">
+                    <span className="material-icon">contact_mail</span>
+                    <span>Schedule Demo</span>
+                  </div>
+                </button>
+                <button className="relative px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center gap-3 text-lg font-semibold hover:bg-white/15 transition-all duration-200">
+                  <span className="material-icon">call</span>
+                  <span>Call: +91-22-12345678</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-300 py-12 px-4 sm:px-6 lg:px-8">
+      <footer className="relative bg-slate-900/80 backdrop-blur-xl border-t border-white/10 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <span className="material-icon text-primary-400" style={{ fontSize: '28px' }}>local_hospital</span>
+                <div className="p-2 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg">
+                  <span className="material-icon text-white" style={{ fontSize: '24px' }}>local_hospital</span>
+                </div>
                 <span className="font-bold text-white text-lg">Zero Risk Agent</span>
               </div>
-              <p className="text-sm">
+              <p className="text-sm text-gray-400">
                 AI-powered healthcare revenue recovery for Indian hospitals.
               </p>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#features" className="hover:text-primary-400 transition">Features</a></li>
-                <li><a href="#pricing" className="hover:text-primary-400 transition">Pricing</a></li>
-                <li><a href="#roi" className="hover:text-primary-400 transition">ROI Calculator</a></li>
-                <li><a href="/dashboard" className="hover:text-primary-400 transition">Dashboard</a></li>
+                <li><a href="#features" className="text-gray-400 hover:text-primary-400 transition">Features</a></li>
+                <li><a href="#pricing" className="text-gray-400 hover:text-primary-400 transition">Pricing</a></li>
+                <li><a href="#roi" className="text-gray-400 hover:text-primary-400 transition">ROI Calculator</a></li>
+                <li><a href="/dashboard" className="text-gray-400 hover:text-primary-400 transition">Dashboard</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-primary-400 transition">About Us</a></li>
-                <li><a href="#" className="hover:text-primary-400 transition">Contact</a></li>
-                <li><a href="#" className="hover:text-primary-400 transition">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-primary-400 transition">Terms of Service</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-primary-400 transition">About Us</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-primary-400 transition">Contact</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-primary-400 transition">Privacy Policy</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-primary-400 transition">Terms of Service</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Contact</h4>
               <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '18px' }}>email</span>
+                <li className="flex items-center gap-2 text-gray-400">
+                  <span className="material-icon" style={{ fontSize: '16px' }}>email</span>
                   admin@hopehospital.com
                 </li>
-                <li className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '18px' }}>call</span>
+                <li className="flex items-center gap-2 text-gray-400">
+                  <span className="material-icon" style={{ fontSize: '16px' }}>call</span>
                   +91-22-12345678
                 </li>
-                <li className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '18px' }}>location_on</span>
+                <li className="flex items-center gap-2 text-gray-400">
+                  <span className="material-icon" style={{ fontSize: '16px' }}>location_on</span>
                   Mumbai, Maharashtra
                 </li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
-            <p>Version 1.1 • Last Updated: 2026-01-11 • zeroriskagent.com</p>
+          <div className="border-t border-white/10 pt-8 text-center text-sm text-gray-500">
+            <p>Version 1.2 • Last Updated: 2026-01-11 • zeroriskagent.com</p>
             <p className="mt-2">Copyright © 2026 Zero Risk Agent. All rights reserved.</p>
           </div>
         </div>
@@ -410,112 +484,131 @@ export default function LandingPage() {
   )
 }
 
-// Component Helpers
+// Modern Components
 
-function StatCard({ icon, value, label, color }: { icon: string; value: string; label: string; color: string }) {
-  const colorClasses = {
-    green: 'text-green-600 bg-green-50',
-    blue: 'text-blue-600 bg-blue-50',
-    purple: 'text-purple-600 bg-purple-50',
-  }
-
+function ModernStatCard({ icon, value, label, gradient }: { icon: string; value: string; label: string; gradient: string }) {
   return (
-    <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-      <div className={`inline-flex p-3 rounded-lg mb-3 ${colorClasses[color as keyof typeof colorClasses]}`}>
-        <span className="material-icon" style={{ fontSize: '24px' }}>{icon}</span>
+    <div className="group relative">
+      <div className={`absolute -inset-1 bg-gradient-to-r ${gradient} rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-300`}></div>
+      <div className="relative bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:scale-105 transition-transform duration-300">
+        <div className={`inline-flex p-3 bg-gradient-to-r ${gradient} rounded-xl mb-3`}>
+          <span className="material-icon text-white" style={{ fontSize: '28px' }}>{icon}</span>
+        </div>
+        <div className="text-4xl font-bold text-white mb-1">{value}</div>
+        <div className="text-sm text-gray-400">{label}</div>
       </div>
-      <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
-      <div className="text-sm text-gray-600">{label}</div>
     </div>
   )
 }
 
-function FeatureCard({ icon, title, description, color }: { icon: string; title: string; description: string; color: string }) {
-  const colorClasses = {
-    blue: 'text-blue-600 bg-blue-50',
-    green: 'text-green-600 bg-green-50',
-    purple: 'text-purple-600 bg-purple-50',
-    orange: 'text-orange-600 bg-orange-50',
-    pink: 'text-pink-600 bg-pink-50',
-    indigo: 'text-indigo-600 bg-indigo-50',
-  }
-
+function GlassCard({ icon, title, description, gradient }: { icon: string; title: string; description: string; gradient: string }) {
   return (
-    <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-shadow duration-200 border border-gray-100">
-      <div className={`inline-flex p-3 rounded-lg mb-4 ${colorClasses[color as keyof typeof colorClasses]}`}>
-        <span className="material-icon" style={{ fontSize: '28px' }}>{icon}</span>
+    <div className="group relative">
+      <div className={`absolute -inset-0.5 bg-gradient-to-r ${gradient} rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-300`}></div>
+      <div className="relative bg-slate-800/40 backdrop-blur-xl rounded-2xl p-8 border border-white/10 hover:scale-105 transition-all duration-300 h-full">
+        <div className={`inline-flex p-4 bg-gradient-to-r ${gradient} rounded-xl mb-6 shadow-lg`}>
+          <span className="material-icon text-white" style={{ fontSize: '32px' }}>{icon}</span>
+        </div>
+        <h3 className="text-2xl font-bold text-white mb-3">{title}</h3>
+        <p className="text-gray-400 leading-relaxed">{description}</p>
       </div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600 leading-relaxed">{description}</p>
     </div>
   )
 }
 
-function StepCard({ number, icon, title, description }: { number: string; icon: string; title: string; description: string }) {
+function StepCardModern({ number, icon, title, description }: { number: string; icon: string; title: string; description: string }) {
   return (
-    <div className="relative">
-      <div className="bg-white rounded-xl p-6 shadow-md border-2 border-primary-100 hover:border-primary-300 transition-colors duration-200">
-        <div className="absolute -top-4 -left-4 bg-primary-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold shadow-lg">
+    <div className="relative group">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-primary-600 to-purple-600 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-300"></div>
+      <div className="relative bg-slate-800/40 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:scale-105 transition-all duration-300">
+        <div className="absolute -top-4 -left-4 bg-gradient-to-br from-primary-600 to-purple-600 text-white w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shadow-xl">
           {number}
         </div>
-        <div className="text-primary-600 mb-3 mt-2">
-          <span className="material-icon" style={{ fontSize: '32px' }}>{icon}</span>
+        <div className="text-primary-400 mb-4 mt-4">
+          <span className="material-icon" style={{ fontSize: '40px' }}>{icon}</span>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-        <p className="text-sm text-gray-600 leading-relaxed">{description}</p>
+        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+        <p className="text-sm text-gray-400 leading-relaxed">{description}</p>
       </div>
     </div>
   )
 }
 
-function PricingFeature({ icon, title, description }: { icon: string; title: string; description: string }) {
+function PricingFeatureModern({ icon, title, description }: { icon: string; title: string; description: string }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="bg-primary-600 text-white p-2 rounded-lg">
-        <span className="material-icon" style={{ fontSize: '20px' }}>{icon}</span>
+    <div className="flex items-start gap-4 p-4 bg-slate-900/30 rounded-xl border border-white/10">
+      <div className="bg-gradient-to-br from-primary-600 to-purple-600 text-white p-3 rounded-lg flex-shrink-0">
+        <span className="material-icon" style={{ fontSize: '24px' }}>{icon}</span>
       </div>
       <div>
-        <div className="font-semibold text-gray-900">{title}</div>
-        <div className="text-sm text-gray-600">{description}</div>
+        <div className="font-bold text-white text-lg mb-1">{title}</div>
+        <div className="text-sm text-gray-400">{description}</div>
       </div>
     </div>
   )
 }
 
-function ROIMetric({ label, value, sublabel, icon, color }: { label: string; value: string; sublabel: string; icon: string; color: string }) {
+function ROIMetricModern({ label, value, sublabel, icon, color }: { label: string; value: string; sublabel: string; icon: string; color: string }) {
   const colorClasses = {
-    green: 'text-green-600',
-    blue: 'text-blue-600',
-    purple: 'text-purple-600',
+    green: 'from-green-500 to-emerald-500',
+    blue: 'from-blue-500 to-cyan-500',
+    purple: 'from-purple-500 to-pink-500',
   }
 
   return (
-    <div className="text-center">
-      <div className={`${colorClasses[color as keyof typeof colorClasses]} mb-2`}>
-        <span className="material-icon" style={{ fontSize: '32px' }}>{icon}</span>
+    <div className="text-center p-4 bg-slate-900/30 rounded-xl border border-white/10">
+      <div className={`inline-flex p-3 bg-gradient-to-r ${colorClasses[color as keyof typeof colorClasses]} rounded-lg mb-3`}>
+        <span className="material-icon text-white" style={{ fontSize: '28px' }}>{icon}</span>
       </div>
-      <div className="text-sm text-gray-600 mb-1">{label}</div>
-      <div className="text-2xl font-bold text-gray-900 mb-1">{value}</div>
+      <div className="text-sm text-gray-400 mb-2">{label}</div>
+      <div className="text-2xl font-bold text-white mb-1">{value}</div>
       <div className="text-xs text-gray-500">{sublabel}</div>
     </div>
   )
 }
 
-function TestimonialCard({ hospital, quote, name, role }: { hospital: string; quote: string; name: string; role: string }) {
+function TestimonialCardModern({ hospital, quote, name, role }: { hospital: string; quote: string; name: string; role: string }) {
   return (
-    <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="material-icon text-yellow-500">star</span>
-        <span className="material-icon text-yellow-500">star</span>
-        <span className="material-icon text-yellow-500">star</span>
-        <span className="material-icon text-yellow-500">star</span>
-        <span className="material-icon text-yellow-500">star</span>
+    <div className="group relative">
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-300"></div>
+      <div className="relative bg-slate-800/40 backdrop-blur-xl rounded-2xl p-8 border border-white/10 hover:scale-105 transition-all duration-300 h-full flex flex-col">
+        <div className="flex items-center gap-1 mb-6">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <span key={i} className="material-icon text-yellow-400" style={{ fontSize: '20px' }}>star</span>
+          ))}
+        </div>
+        <p className="text-gray-300 mb-6 leading-relaxed flex-grow italic">"{quote}"</p>
+        <div className="border-t border-white/10 pt-6">
+          <div className="font-bold text-white text-lg">{name}</div>
+          <div className="text-sm text-gray-400">{role}</div>
+          <div className="text-xs text-primary-400 mt-2 font-medium">{hospital}</div>
+        </div>
       </div>
-      <p className="text-gray-700 mb-4 leading-relaxed">"{quote}"</p>
-      <div className="border-t border-gray-100 pt-4">
-        <div className="font-semibold text-gray-900">{name}</div>
-        <div className="text-sm text-gray-600">{role}</div>
-        <div className="text-xs text-primary-600 mt-1">{hospital}</div>
+    </div>
+  )
+}
+
+function AtomicAnimation() {
+  return (
+    <div className="relative w-64 h-64 flex items-center justify-center">
+      {/* Nucleus */}
+      <div className="absolute w-16 h-16 bg-gradient-to-br from-primary-400 via-purple-500 to-pink-500 rounded-full shadow-2xl animate-pulse z-10">
+        <div className="absolute inset-2 bg-gradient-to-br from-white to-primary-200 rounded-full"></div>
+      </div>
+
+      {/* Orbit 1 */}
+      <div className="absolute w-48 h-48 border-2 border-primary-400/30 rounded-full orbit-1">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-primary-400 to-purple-500 rounded-full shadow-lg electron"></div>
+      </div>
+
+      {/* Orbit 2 */}
+      <div className="absolute w-56 h-56 border-2 border-purple-400/30 rounded-full orbit-2">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full shadow-lg electron"></div>
+      </div>
+
+      {/* Orbit 3 */}
+      <div className="absolute w-64 h-64 border-2 border-pink-400/30 rounded-full orbit-3">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-pink-400 to-primary-500 rounded-full shadow-lg electron"></div>
       </div>
     </div>
   )
