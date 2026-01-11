@@ -23,12 +23,12 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 text-white overflow-hidden">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-pink-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-red-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-red-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
       {/* Navigation */}
@@ -36,7 +36,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg">
+              <div className="p-2 bg-gradient-to-br from-red-500 to-orange-600 rounded-lg">
                 <span className="material-icon text-white" style={{ fontSize: '28px' }}>local_hospital</span>
               </div>
               <div>
@@ -50,7 +50,7 @@ export default function LandingPage() {
               <a href="#pricing" className="text-sm text-gray-300 hover:text-white transition-colors duration-200">Pricing</a>
               <a href="#roi" className="text-sm text-gray-300 hover:text-white transition-colors duration-200">ROI Calculator</a>
               <a href="/dashboard" className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 to-purple-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-200"></div>
+                <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-orange-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-200"></div>
                 <div className="relative px-6 py-2.5 bg-slate-900 rounded-lg flex items-center gap-2">
                   <span className="material-icon" style={{ fontSize: '18px' }}>dashboard</span>
                   <span className="text-sm font-medium">Dashboard</span>
@@ -72,7 +72,7 @@ export default function LandingPage() {
                 <span className="block bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">
                   Zero Risk
                 </span>
-                <span className="block mt-2 bg-gradient-to-r from-primary-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
+                <span className="block mt-2 bg-gradient-to-r from-red-400 via-orange-400 to-red-500 bg-clip-text text-transparent animate-gradient">
                   Agent
                 </span>
               </h1>
@@ -80,21 +80,21 @@ export default function LandingPage() {
 
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 px-5 py-2.5 rounded-full text-sm font-medium mb-8 hover:bg-white/15 transition-all duration-300 cursor-pointer group">
-              <span className="material-icon text-primary-400 group-hover:rotate-12 transition-transform duration-300" style={{ fontSize: '20px' }}>auto_awesome</span>
-              <span className="bg-gradient-to-r from-primary-400 to-purple-400 bg-clip-text text-transparent">Powered by Advanced AI</span>
+              <span className="material-icon text-red-400 group-hover:rotate-12 transition-transform duration-300" style={{ fontSize: '20px' }}>auto_awesome</span>
+              <span className="bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">Powered by Advanced AI</span>
             </div>
 
             {/* Subtitle */}
             <p className="text-xl md:text-2xl text-gray-300 mb-12 leading-relaxed max-w-4xl mx-auto">
-              AI-powered platform recovering <span className="text-primary-400 font-semibold">millions in denied claims</span> from ESIC, CGHS, and ECHS.
+              AI-powered platform recovering <span className="text-red-400 font-semibold">millions in denied claims</span> from ESIC, CGHS, and ECHS.
               <span className="block mt-2 text-lg text-gray-400">You only pay when we win.</span>
             </p>
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
               <button className="group relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 via-purple-600 to-pink-600 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition duration-300 animate-gradient"></div>
-                <div className="relative px-8 py-4 bg-gradient-to-r from-primary-600 to-purple-600 rounded-xl flex items-center justify-center gap-3 text-lg font-bold shadow-2xl group-hover:scale-105 transition-transform duration-200">
+                <div className="absolute -inset-1 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition duration-300 animate-gradient"></div>
+                <div className="relative px-8 py-4 bg-gradient-to-r from-red-600 to-orange-600 rounded-xl flex items-center justify-center gap-3 text-lg font-bold shadow-2xl group-hover:scale-105 transition-transform duration-200">
                   <span className="material-icon group-hover:rotate-12 transition-transform duration-300">rocket_launch</span>
                   <span>Start Recovering Now</span>
                 </div>
@@ -238,7 +238,7 @@ export default function LandingPage() {
           </div>
 
           <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 via-purple-600 to-pink-600 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition duration-300"></div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition duration-300"></div>
             <div className="relative bg-slate-800/50 backdrop-blur-xl rounded-3xl p-12 border border-white/10">
               <div className="flex items-center justify-between mb-8">
                 <div>
@@ -269,7 +269,7 @@ export default function LandingPage() {
                   </div>
                   <div className="flex justify-between items-center pb-3 border-b border-white/10">
                     <span className="text-gray-400">Our fee (25%):</span>
-                    <span className="font-semibold text-primary-400 text-lg">₹15,000</span>
+                    <span className="font-semibold text-red-400 text-lg">₹15,000</span>
                   </div>
                   <div className="flex justify-between items-center pt-3">
                     <span className="font-bold text-white text-lg">You receive:</span>
@@ -397,7 +397,7 @@ export default function LandingPage() {
       <section className="relative py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 via-purple-600 to-pink-600 rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition duration-300"></div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 rounded-3xl blur-2xl opacity-50 group-hover:opacity-75 transition duration-300"></div>
             <div className="relative bg-slate-800/50 backdrop-blur-xl rounded-3xl p-16 border border-white/10">
               <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                 Ready to Recover?
@@ -429,7 +429,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 bg-gradient-to-br from-primary-500 to-purple-600 rounded-lg">
+                <div className="p-2 bg-gradient-to-br from-red-500 to-orange-600 rounded-lg">
                   <span className="material-icon text-white" style={{ fontSize: '24px' }}>local_hospital</span>
                 </div>
                 <span className="font-bold text-white text-lg">Zero Risk Agent</span>
@@ -441,19 +441,19 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold text-white mb-4">Product</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#features" className="text-gray-400 hover:text-primary-400 transition">Features</a></li>
-                <li><a href="#pricing" className="text-gray-400 hover:text-primary-400 transition">Pricing</a></li>
-                <li><a href="#roi" className="text-gray-400 hover:text-primary-400 transition">ROI Calculator</a></li>
-                <li><a href="/dashboard" className="text-gray-400 hover:text-primary-400 transition">Dashboard</a></li>
+                <li><a href="#features" className="text-gray-400 hover:text-red-400 transition">Features</a></li>
+                <li><a href="#pricing" className="text-gray-400 hover:text-red-400 transition">Pricing</a></li>
+                <li><a href="#roi" className="text-gray-400 hover:text-red-400 transition">ROI Calculator</a></li>
+                <li><a href="/dashboard" className="text-gray-400 hover:text-red-400 transition">Dashboard</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-white mb-4">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="text-gray-400 hover:text-primary-400 transition">About Us</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-primary-400 transition">Contact</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-primary-400 transition">Privacy Policy</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-primary-400 transition">Terms of Service</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-red-400 transition">About Us</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-red-400 transition">Contact</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-red-400 transition">Privacy Policy</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-red-400 transition">Terms of Service</a></li>
               </ul>
             </div>
             <div>
@@ -519,12 +519,12 @@ function GlassCard({ icon, title, description, gradient }: { icon: string; title
 function StepCardModern({ number, icon, title, description }: { number: string; icon: string; title: string; description: string }) {
   return (
     <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-primary-600 to-purple-600 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-300"></div>
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-red-600 to-orange-600 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-300"></div>
       <div className="relative bg-slate-800/40 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:scale-105 transition-all duration-300">
-        <div className="absolute -top-4 -left-4 bg-gradient-to-br from-primary-600 to-purple-600 text-white w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shadow-xl">
+        <div className="absolute -top-4 -left-4 bg-gradient-to-br from-red-600 to-orange-600 text-white w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shadow-xl">
           {number}
         </div>
-        <div className="text-primary-400 mb-4 mt-4">
+        <div className="text-red-400 mb-4 mt-4">
           <span className="material-icon" style={{ fontSize: '40px' }}>{icon}</span>
         </div>
         <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
@@ -537,7 +537,7 @@ function StepCardModern({ number, icon, title, description }: { number: string; 
 function PricingFeatureModern({ icon, title, description }: { icon: string; title: string; description: string }) {
   return (
     <div className="flex items-start gap-4 p-4 bg-slate-900/30 rounded-xl border border-white/10">
-      <div className="bg-gradient-to-br from-primary-600 to-purple-600 text-white p-3 rounded-lg flex-shrink-0">
+      <div className="bg-gradient-to-br from-red-600 to-orange-600 text-white p-3 rounded-lg flex-shrink-0">
         <span className="material-icon" style={{ fontSize: '24px' }}>{icon}</span>
       </div>
       <div>
@@ -581,7 +581,7 @@ function TestimonialCardModern({ hospital, quote, name, role }: { hospital: stri
         <div className="border-t border-white/10 pt-6">
           <div className="font-bold text-white text-lg">{name}</div>
           <div className="text-sm text-gray-400">{role}</div>
-          <div className="text-xs text-primary-400 mt-2 font-medium">{hospital}</div>
+          <div className="text-xs text-red-400 mt-2 font-medium">{hospital}</div>
         </div>
       </div>
     </div>
@@ -592,23 +592,23 @@ function AtomicAnimation() {
   return (
     <div className="relative w-64 h-64 flex items-center justify-center">
       {/* Nucleus */}
-      <div className="absolute w-16 h-16 bg-gradient-to-br from-primary-400 via-purple-500 to-pink-500 rounded-full shadow-2xl animate-pulse z-10">
-        <div className="absolute inset-2 bg-gradient-to-br from-white to-primary-200 rounded-full"></div>
+      <div className="absolute w-16 h-16 bg-gradient-to-br from-red-400 via-orange-500 to-red-500 rounded-full shadow-2xl animate-pulse z-10">
+        <div className="absolute inset-2 bg-gradient-to-br from-white to-red-200 rounded-full"></div>
       </div>
 
       {/* Orbit 1 */}
-      <div className="absolute w-48 h-48 border-2 border-primary-400/30 rounded-full orbit-1">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-primary-400 to-purple-500 rounded-full shadow-lg electron"></div>
+      <div className="absolute w-48 h-48 border-2 border-red-400/30 rounded-full orbit-1">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-red-400 to-orange-500 rounded-full shadow-lg electron"></div>
       </div>
 
       {/* Orbit 2 */}
-      <div className="absolute w-56 h-56 border-2 border-purple-400/30 rounded-full orbit-2">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full shadow-lg electron"></div>
+      <div className="absolute w-56 h-56 border-2 border-orange-400/30 rounded-full orbit-2">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-orange-400 to-red-500 rounded-full shadow-lg electron"></div>
       </div>
 
       {/* Orbit 3 */}
-      <div className="absolute w-64 h-64 border-2 border-pink-400/30 rounded-full orbit-3">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-pink-400 to-primary-500 rounded-full shadow-lg electron"></div>
+      <div className="absolute w-64 h-64 border-2 border-red-400/30 rounded-full orbit-3">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-gradient-to-br from-red-400 to-orange-500 rounded-full shadow-lg electron"></div>
       </div>
     </div>
   )
