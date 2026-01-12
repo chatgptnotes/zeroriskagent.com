@@ -49,11 +49,11 @@ export default function LandingPage() {
               <a href="#how-it-works" className="text-sm text-gray-300 hover:text-white transition-colors duration-200">How It Works</a>
               <a href="#pricing" className="text-sm text-gray-300 hover:text-white transition-colors duration-200">Pricing</a>
               <a href="#roi" className="text-sm text-gray-300 hover:text-white transition-colors duration-200">ROI Calculator</a>
-              <a href="/dashboard" className="relative group">
+              <a href="/recovery" className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-orange-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-200"></div>
                 <div className="relative px-6 py-2.5 bg-slate-900 rounded-lg flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '18px' }}>dashboard</span>
-                  <span className="text-sm font-medium">Dashboard</span>
+                  <span className="material-icon" style={{ fontSize: '18px' }}>receipt_long</span>
+                  <span className="text-sm font-medium">Recovery</span>
                 </div>
               </a>
             </div>
@@ -444,7 +444,8 @@ export default function LandingPage() {
                 <li><a href="#features" className="text-gray-400 hover:text-red-400 transition">Features</a></li>
                 <li><a href="#pricing" className="text-gray-400 hover:text-red-400 transition">Pricing</a></li>
                 <li><a href="#roi" className="text-gray-400 hover:text-red-400 transition">ROI Calculator</a></li>
-                <li><a href="/dashboard" className="text-gray-400 hover:text-red-400 transition">Dashboard</a></li>
+                <li><a href="/recovery" className="text-gray-400 hover:text-red-400 transition">Recovery Dashboard</a></li>
+                <li><a href="/nmi" className="text-gray-400 hover:text-red-400 transition">NMI Tracker</a></li>
               </ul>
             </div>
             <div>
@@ -475,7 +476,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 text-center text-sm text-gray-500">
-            <p>Version 1.2 • Last Updated: 2026-01-11 • zeroriskagent.com</p>
+            <p>Version 1.2 | Last Updated: 2026-01-12 | zeroriskagent.com</p>
             <p className="mt-2">Copyright © 2026 Zero Risk Agent. All rights reserved.</p>
           </div>
         </div>
