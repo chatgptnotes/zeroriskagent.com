@@ -1,11 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import RoleDashboard from './components/RoleDashboard'
 import Navigation from './components/Navigation'
 import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
 import AdminRegister from './pages/AdminRegister'
-import Dashboard from './pages/Dashboard'
+import SuperAdminDashboard from './pages/SuperAdminDashboard'
+import AdminDashboard from './pages/AdminDashboard'
+import StaffDashboard from './pages/StaffDashboard'
 import RecoveryDashboard from './pages/RecoveryDashboard'
 import NMITracker from './pages/NMITracker'
 import UserManagement from './pages/UserManagement'
@@ -24,7 +27,29 @@ function App() {
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Navigation />
-              <Dashboard />
+              <RoleDashboard />
+            </ProtectedRoute>
+          } />
+          
+          {/* Individual dashboard routes for direct access */}
+          <Route path="/dashboard/super-admin" element={
+            <ProtectedRoute requiredRole={['super_admin', 'agent_admin']}>
+              <Navigation />
+              <SuperAdminDashboard />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/dashboard/admin" element={
+            <ProtectedRoute requiredRole={['hospital_admin']}>
+              <Navigation />
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/dashboard/staff" element={
+            <ProtectedRoute requiredRole={['billing_staff', 'doctor']}>
+              <Navigation />
+              <StaffDashboard />
             </ProtectedRoute>
           } />
           
