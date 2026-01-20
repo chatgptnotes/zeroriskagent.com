@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { getMockDashboardMetrics } from '../services/mockData.service'
-import type { DashboardMetrics } from '../types/database.types'
+import { getRecoverySummary, type RecoverySummary } from '../services/recovery.service'
 
 export default function SuperAdminDashboard() {
-  const { profile, isMockMode } = useAuth()
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const { profile } = useAuth()
+  const [metrics, setMetrics] = useState<RecoverySummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [systemStats, setSystemStats] = useState({
@@ -19,27 +18,14 @@ export default function SuperAdminDashboard() {
   useEffect(() => {
     fetchDashboardMetrics()
     fetchSystemStats()
-  }, [isMockMode])
+  }, [])
 
   async function fetchDashboardMetrics() {
     try {
       setLoading(true)
       setError(null)
-      
-      if (isMockMode) {
-        const { data, error } = await getMockDashboardMetrics()
-        if (error) throw new Error(error)
-        setMetrics(data)
-      } else {
-        const { data, error } = await supabase
-          .from('dashboard_metrics')
-          .select('*')
-          .limit(1)
-          .single()
-
-        if (error) throw error
-        setMetrics(data)
-      }
+      const summary = await getRecoverySummary()
+      setMetrics(summary)
     } catch (err) {
       console.error('Error fetching metrics:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch dashboard metrics')
@@ -49,13 +35,20 @@ export default function SuperAdminDashboard() {
   }
 
   async function fetchSystemStats() {
-    if (isMockMode) {
+    try {
+      // Get real user count from zero_login_user
+      const { count } = await supabase
+        .from('zero_login_user')
+        .select('*', { count: 'exact', head: true })
+
       setSystemStats({
-        totalUsers: 12,
-        activeHospitals: 3,
-        totalRevenue: 2500000,
-        systemHealth: 'Excellent'
+        totalUsers: count || 0,
+        activeHospitals: 1, // Hope Hospital
+        totalRevenue: 0, // Will be computed from recovery
+        systemHealth: 'Good'
       })
+    } catch (err) {
+      console.error('Error fetching system stats:', err)
     }
   }
 
@@ -159,15 +152,15 @@ export default function SuperAdminDashboard() {
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                 <span className="text-sm text-gray-600">Total Claims Processed</span>
-                <span className="text-lg font-semibold">₹{metrics?.total_claimed?.toLocaleString() || '0'}</span>
+                <span className="text-lg font-semibold">₹{metrics?.totalAmount?.toLocaleString() || '0'}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                 <span className="text-sm text-gray-600">Total Recovered</span>
-                <span className="text-lg font-semibold text-green-600">₹{metrics?.total_recovery_value?.toLocaleString() || '0'}</span>
+                <span className="text-lg font-semibold text-green-600">₹{metrics?.receivedAmount?.toLocaleString() || '0'}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
                 <span className="text-sm text-gray-600">Platform Revenue (25%)</span>
-                <span className="text-lg font-semibold text-purple-600">₹{((metrics?.total_recovery_value || 0) * 0.25)?.toLocaleString()}</span>
+                <span className="text-lg font-semibold text-purple-600">₹{((metrics?.receivedAmount || 0) * 0.25)?.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -181,8 +174,8 @@ export default function SuperAdminDashboard() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Overall Recovery Rate</span>
                 <span className="text-lg font-semibold text-green-600">
-                  {metrics && metrics.total_claims > 0 
-                    ? `${((metrics.total_recovery_value / metrics.total_claimed) * 100).toFixed(1)}%`
+                  {metrics && metrics.totalAmount > 0
+                    ? `${((metrics.receivedAmount / metrics.totalAmount) * 100).toFixed(1)}%`
                     : '0%'}
                 </span>
               </div>
