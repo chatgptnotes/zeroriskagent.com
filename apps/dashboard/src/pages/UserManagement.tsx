@@ -6,28 +6,15 @@ interface User {
   id: string
   email: string
   full_name: string
-  phone?: string
+  password?: string
   role: string
-  hospital_id?: string
-  hospital_name?: string
-  status: 'active' | 'suspended' | 'inactive'
-  can_approve_appeals: boolean
-  can_view_financials: boolean
-  can_export_data: boolean
-  last_login_at?: string
+  status: string
   created_at: string
-}
-
-interface Hospital {
-  id: string
-  name: string
-  registration_number: string
 }
 
 export default function UserManagement() {
   const { profile, isAdmin, isSuperAdmin } = useAuth()
   const [users, setUsers] = useState<User[]>([])
-  const [hospitals, setHospitals] = useState<Hospital[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAddUser, setShowAddUser] = useState(false)
@@ -36,67 +23,32 @@ export default function UserManagement() {
   const [newUser, setNewUser] = useState({
     email: '',
     full_name: '',
-    phone: '',
     role: 'billing_staff',
-    hospital_id: profile?.hospital_id || '',
     password: ''
   })
 
   useEffect(() => {
     if (isAdmin) {
       loadUsers()
-      loadHospitals()
     }
   }, [isAdmin])
 
   const loadUsers = async () => {
     try {
       setLoading(true)
-      let query = supabase
-        .from('users')
-        .select(`
-          *,
-          hospitals:hospital_id (
-            name,
-            registration_number
-          )
-        `)
-
-      // If not super admin, filter by hospital
-      if (!isSuperAdmin && profile?.hospital_id) {
-        query = query.eq('hospital_id', profile.hospital_id)
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false })
+      const { data, error } = await supabase
+        .from('zero_login_user')
+        .select('*')
+        .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      const formattedUsers = data?.map(user => ({
-        ...user,
-        hospital_name: user.hospitals?.name
-      })) || []
-
-      setUsers(formattedUsers)
+      setUsers(data || [])
     } catch (err) {
       console.error('Error loading users:', err)
       setError('Failed to load users')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const loadHospitals = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('hospitals')
-        .select('id, name, registration_number')
-        .eq('status', 'active')
-        .order('name')
-
-      if (error) throw error
-      setHospitals(data || [])
-    } catch (err) {
-      console.error('Error loading hospitals:', err)
     }
   }
 
@@ -109,45 +61,33 @@ export default function UserManagement() {
       return
     }
 
+    if (newUser.password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+
     try {
-      // Create auth user
-      const { data, error: signUpError } = await supabase.auth.admin.createUser({
-        email: newUser.email,
-        password: newUser.password,
-        email_confirm: true
-      })
-
-      if (signUpError) throw signUpError
-
-      if (data.user) {
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            email: newUser.email,
-            full_name: newUser.full_name,
-            phone: newUser.phone || null,
-            role: newUser.role,
-            hospital_id: newUser.hospital_id || null,
-            can_approve_appeals: newUser.role === 'hospital_admin',
-            can_view_financials: newUser.role === 'hospital_admin',
-            can_export_data: newUser.role === 'hospital_admin'
-          })
-
-        if (profileError) throw profileError
-
-        setNewUser({
-          email: '',
-          full_name: '',
-          phone: '',
-          role: 'billing_staff',
-          hospital_id: profile?.hospital_id || '',
-          password: ''
+      // Insert directly into zero_login_user table
+      const { error: insertError } = await supabase
+        .from('zero_login_user')
+        .insert({
+          email: newUser.email,
+          full_name: newUser.full_name,
+          password: newUser.password,
+          role: newUser.role,
+          status: 'active'
         })
-        setShowAddUser(false)
-        loadUsers()
-      }
+
+      if (insertError) throw insertError
+
+      setNewUser({
+        email: '',
+        full_name: '',
+        role: 'billing_staff',
+        password: ''
+      })
+      setShowAddUser(false)
+      loadUsers()
     } catch (err) {
       console.error('Error adding user:', err)
       setError(err instanceof Error ? err.message : 'Failed to add user')
@@ -176,7 +116,11 @@ export default function UserManagement() {
     if (!confirm('Are you sure you want to delete this user?')) return
 
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId)
+      const { error } = await supabase
+        .from('zero_login_user')
+        .delete()
+        .eq('id', userId)
+
       if (error) throw error
 
       loadUsers()
@@ -269,16 +213,6 @@ export default function UserManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Phone</label>
-                  <input
-                    type="tel"
-                    value={newUser.phone}
-                    onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                </div>
-
-                <div>
                   <label className="block text-sm font-medium text-gray-700">Role *</label>
                   <select
                     required
@@ -292,24 +226,6 @@ export default function UserManagement() {
                     {isSuperAdmin && <option value="super_admin">Super Admin</option>}
                   </select>
                 </div>
-
-                {isSuperAdmin && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Hospital</label>
-                    <select
-                      value={newUser.hospital_id}
-                      onChange={(e) => setNewUser({ ...newUser, hospital_id: e.target.value })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    >
-                      <option value="">Select Hospital</option>
-                      {hospitals.map((hospital) => (
-                        <option key={hospital.id} value={hospital.id}>
-                          {hospital.name} ({hospital.registration_number})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Password *</label>
@@ -369,7 +285,7 @@ export default function UserManagement() {
                         </div>
                         <div className="text-sm text-gray-500">{user.email}</div>
                         <div className="text-xs text-gray-400">
-                          {user.role.replace('_', ' ')} • {user.hospital_name || 'No hospital'}
+                          {user.role.replace(/_/g, ' ')}
                         </div>
                       </div>
                     </div>
@@ -392,18 +308,10 @@ export default function UserManagement() {
                     </div>
                   </div>
                   
-                  <div className="mt-2 sm:flex sm:justify-between">
-                    <div className="sm:flex">
-                      <div className="mr-6 flex items-center text-sm text-gray-500">
-                        <span className="material-icon mr-1 text-xs">access_time</span>
-                        Created {new Date(user.created_at).toLocaleDateString()}
-                      </div>
-                      {user.last_login_at && (
-                        <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                          <span className="material-icon mr-1 text-xs">login</span>
-                          Last login {new Date(user.last_login_at).toLocaleDateString()}
-                        </div>
-                      )}
+                  <div className="mt-2">
+                    <div className="flex items-center text-sm text-gray-500">
+                      <span className="material-icon mr-1 text-xs">access_time</span>
+                      Created {new Date(user.created_at).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
@@ -421,7 +329,7 @@ export default function UserManagement() {
         </div>
 
         <footer className="text-center text-xs text-gray-400 mt-8">
-          <p>v1.1 - 2026-01-20 - zeroriskagent.com</p>
+          <p>v1.2 - 2026-01-20 - zeroriskagent.com</p>
         </footer>
       </div>
     </div>
