@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRecoverySummary, useBillsByPayer, useBillsList } from '../hooks/useRecovery'
+import MockModeMessage from '../components/MockModeMessage'
 import type { BillWithPatient } from '../services/recovery.service'
 
 export default function RecoveryDashboard() {
@@ -47,6 +48,10 @@ export default function RecoveryDashboard() {
   }
 
   return (
+    <MockModeMessage 
+      pageName="Recovery Dashboard" 
+      description="Track recovered amounts, agent fees, and financial analytics with detailed recovery metrics."
+    >
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
@@ -330,6 +335,7 @@ export default function RecoveryDashboard() {
         </div>
       </footer>
     </div>
+    </MockModeMessage>
   )
 }
 

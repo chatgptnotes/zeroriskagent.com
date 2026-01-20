@@ -1,27 +1,38 @@
 import { useEffect, useState } from 'react'
+import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
+import { getMockDashboardMetrics } from '../services/mockData.service'
 import type { DashboardMetrics } from '../types/database.types'
 
 export default function Dashboard() {
+  const { isMockMode } = useAuth()
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchDashboardMetrics()
-  }, [])
+  }, [isMockMode])
 
   async function fetchDashboardMetrics() {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('dashboard_metrics')
-        .select('*')
-        .limit(1)
-        .single()
+      setError(null)
+      
+      if (isMockMode) {
+        const { data, error } = await getMockDashboardMetrics()
+        if (error) throw new Error(error)
+        setMetrics(data)
+      } else {
+        const { data, error } = await supabase
+          .from('dashboard_metrics')
+          .select('*')
+          .limit(1)
+          .single()
 
-      if (error) throw error
-      setMetrics(data)
+        if (error) throw error
+        setMetrics(data)
+      }
     } catch (err) {
       console.error('Error fetching metrics:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch dashboard metrics')
@@ -96,6 +107,12 @@ export default function Dashboard() {
               </a>
             </div>
             <div className="flex items-center gap-4">
+              {isMockMode && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1 rounded-md text-xs flex items-center gap-1">
+                  <span className="material-icon text-sm">info</span>
+                  Mock Data Mode
+                </div>
+              )}
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{metrics.hospital_name}</p>
                 <p className="text-xs text-gray-500">Admin Dashboard</p>

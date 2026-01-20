@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNMISummary, useNMIList, useDispositionOptions, usePayerOptions } from '../hooks/useNMI'
+import MockModeMessage from '../components/MockModeMessage'
 import type { NMIRecord } from '../services/nmi.service'
 
 export default function NMITracker() {
@@ -38,6 +39,10 @@ export default function NMITracker() {
   }
 
   return (
+    <MockModeMessage 
+      pageName="NMI Claims Tracker" 
+      description="Track and manage Note of Medical Intervention (NMI) claims and responses from insurance providers."
+    >
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
@@ -272,6 +277,7 @@ export default function NMITracker() {
         </div>
       </footer>
     </div>
+    </MockModeMessage>
   )
 }
 
