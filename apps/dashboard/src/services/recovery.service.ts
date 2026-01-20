@@ -71,6 +71,7 @@ export interface RecoverySummary {
 export interface BillWithPatient {
   id: string
   visit_id: string
+  claim_id: string | null
   bill_amount: number
   expected_amount: number | null
   received_amount: number | null
@@ -85,6 +86,7 @@ export interface BillWithPatient {
   nmi_date: string | null
   nmi_answered: string | null
   status: 'pending' | 'received' | 'partial' | 'nmi'
+  bill_age: number
 }
 
 export interface PayerSummary {
@@ -253,10 +255,10 @@ export async function getBillsList(options?: {
   // Get visit_ids to fetch patient info
   const visitIds = [...new Set(bills?.map(b => b.visit_id).filter(Boolean) || [])]
 
-  // Get visits with patient_id
+  // Get visits with patient_id and claim_id
   const { data: visits, error: visitsError } = await supabase
     .from('visits')
-    .select('visit_id, patient_id')
+    .select('visit_id, patient_id, claim_id')
     .in('visit_id', visitIds)
 
   if (visitsError) {
@@ -280,6 +282,7 @@ export async function getBillsList(options?: {
 
   // Create maps
   const visitPatientMap = new Map(visits?.map(v => [v.visit_id, v.patient_id]))
+  const visitClaimMap = new Map(visits?.map(v => [v.visit_id, v.claim_id]))
   const patientMap = new Map(patients?.map(p => [p.id, p.name]))
 
   // Determine status for each bill
@@ -292,14 +295,25 @@ export async function getBillsList(options?: {
     return 'pending'
   }
 
+  // Calculate bill age in days from submission date
+  const calculateBillAge = (submissionDate: string | null): number => {
+    if (!submissionDate) return 0
+    const submission = new Date(submissionDate)
+    const today = new Date()
+    const diffTime = today.getTime() - submission.getTime()
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  }
+
   // Transform data
   let combinedData: BillWithPatient[] = bills?.map(bill => {
     const patientId = visitPatientMap.get(bill.visit_id) || ''
     const patientName = patientMap.get(patientId) || 'Unknown'
+    const claimId = visitClaimMap.get(bill.visit_id) || null
 
     return {
       id: bill.id,
       visit_id: bill.visit_id || '',
+      claim_id: claimId,
       bill_amount: bill.bill_amount || 0,
       expected_amount: bill.expected_amount,
       received_amount: bill.received_amount,
@@ -314,6 +328,7 @@ export async function getBillsList(options?: {
       nmi_date: bill.nmi_date,
       nmi_answered: bill.nmi_answered,
       status: getStatus(bill),
+      bill_age: calculateBillAge(bill.date_of_submission),
     }
   }) || []
 
@@ -356,18 +371,20 @@ export async function getBillDetails(billId: string): Promise<BillWithPatient | 
 
   if (!bill) return null
 
-  // Get visit to find patient
+  // Get visit to find patient and claim_id
   const { data: visit } = await supabase
     .from('visits')
-    .select('patient_id')
+    .select('patient_id, claim_id')
     .eq('visit_id', bill.visit_id)
     .single()
 
   // Get patient name
   let patientName = 'Unknown'
   let patientId = ''
+  let claimId: string | null = null
   if (visit?.patient_id) {
     patientId = visit.patient_id
+    claimId = visit.claim_id || null
     const { data: patient } = await supabase
       .from('patients')
       .select('name')
@@ -388,9 +405,19 @@ export async function getBillDetails(billId: string): Promise<BillWithPatient | 
     return 'pending'
   }
 
+  // Calculate bill age
+  const calculateBillAge = (submissionDate: string | null): number => {
+    if (!submissionDate) return 0
+    const submission = new Date(submissionDate)
+    const today = new Date()
+    const diffTime = today.getTime() - submission.getTime()
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  }
+
   return {
     id: bill.id,
     visit_id: bill.visit_id || '',
+    claim_id: claimId,
     bill_amount: bill.bill_amount || 0,
     expected_amount: bill.expected_amount,
     received_amount: bill.received_amount,
@@ -405,5 +432,6 @@ export async function getBillDetails(billId: string): Promise<BillWithPatient | 
     nmi_date: bill.nmi_date,
     nmi_answered: bill.nmi_answered,
     status: getStatus(),
+    bill_age: calculateBillAge(bill.date_of_submission),
   }
 }
