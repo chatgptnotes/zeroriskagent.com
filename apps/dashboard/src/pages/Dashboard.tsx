@@ -171,17 +171,22 @@ export default function Dashboard() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Claim ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Visit ID</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Patient Name</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Corporate</th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Amount</th>
                   <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Bill Age</th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Submission Date</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Expected Payment</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Days</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Aging</th>
                   <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {bills.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-gray-500">
+                    <td colSpan={11} className="py-8 text-center text-gray-500">
                       <span className="material-icon text-gray-300 mb-2" style={{ fontSize: '48px' }}>inbox</span>
                       <p>No claims found</p>
                     </td>
@@ -191,11 +196,21 @@ export default function Dashboard() {
                     <tr key={bill.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <span className="text-sm font-medium text-primary-600">
-                          {bill.claim_id || bill.visit_id}
+                          {bill.claim_id || '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">
+                          {bill.visit_id}
                         </span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-900">{bill.patient_name}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-700 font-medium">
+                          {bill.payer_type}
+                        </span>
                       </td>
                       <td className="py-3 px-4 text-right">
                         <span className="text-sm font-semibold text-gray-900">
@@ -215,6 +230,19 @@ export default function Dashboard() {
                         <span className="text-sm text-gray-600">
                           {formatDate(bill.date_of_submission)}
                         </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">
+                          {formatDate(bill.expected_payment_date)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="text-sm font-medium text-gray-900">
+                          {bill.overdue_days > 0 ? bill.overdue_days : '-'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <AgingBadge bucket={bill.aging_bucket} />
                       </td>
                       <td className="py-3 px-4 text-center">
                         <StatusBadge status={bill.status} />
@@ -243,7 +271,8 @@ function StatusBadge({ status }: { status: string }) {
     pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
     received: { label: 'Received', color: 'bg-green-100 text-green-800' },
     partial: { label: 'Partial', color: 'bg-blue-100 text-blue-800' },
-    nmi: { label: 'NMI', color: 'bg-red-100 text-red-800' },
+    nmi: { label: 'NMI', color: 'bg-orange-100 text-orange-800' },
+    overdue: { label: 'Overdue', color: 'bg-red-100 text-red-800' },
   }
 
   const config = statusConfig[status] || { label: status, color: 'bg-gray-100 text-gray-800' }
@@ -251,6 +280,26 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
       {config.label}
+    </span>
+  )
+}
+
+function AgingBadge({ bucket }: { bucket: string }) {
+  const bucketConfig: Record<string, string> = {
+    '-': 'bg-gray-100 text-gray-600',
+    '0-30': 'bg-green-100 text-green-800',
+    '31-60': 'bg-yellow-100 text-yellow-800',
+    '61-90': 'bg-orange-100 text-orange-800',
+    '91-180': 'bg-red-100 text-red-800',
+    '181-365': 'bg-red-200 text-red-900',
+    '365+': 'bg-red-300 text-red-900',
+  }
+
+  const colorClass = bucketConfig[bucket] || 'bg-gray-100 text-gray-600'
+
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${colorClass}`}>
+      {bucket}
     </span>
   )
 }

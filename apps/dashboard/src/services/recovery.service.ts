@@ -85,8 +85,10 @@ export interface BillWithPatient {
   nmi: string | null
   nmi_date: string | null
   nmi_answered: string | null
-  status: 'pending' | 'received' | 'partial' | 'nmi'
+  status: 'pending' | 'received' | 'partial' | 'nmi' | 'overdue'
   bill_age: number
+  overdue_days: number
+  aging_bucket: string
 }
 
 export interface PayerSummary {
@@ -286,12 +288,13 @@ export async function getBillsList(options?: {
   const patientMap = new Map(patients?.map(p => [p.id, p.name]))
 
   // Determine status for each bill
-  const getStatus = (bill: typeof bills[0]): 'pending' | 'received' | 'partial' | 'nmi' => {
+  const getStatus = (bill: typeof bills[0], overdueDays: number): 'pending' | 'received' | 'partial' | 'nmi' | 'overdue' => {
     if (bill.nmi && bill.nmi.trim() !== '' && !bill.nmi_answered) return 'nmi'
     if (bill.received_date && bill.received_amount) {
       if (bill.received_amount >= bill.bill_amount) return 'received'
       return 'partial'
     }
+    if (overdueDays > 0) return 'overdue'
     return 'pending'
   }
 
@@ -304,11 +307,33 @@ export async function getBillsList(options?: {
     return Math.floor(diffTime / (1000 * 60 * 60 * 24))
   }
 
+  // Calculate overdue days from expected payment date
+  const calculateOverdueDays = (expectedPaymentDate: string | null): number => {
+    if (!expectedPaymentDate) return 0
+    const expected = new Date(expectedPaymentDate)
+    const today = new Date()
+    const diffTime = today.getTime() - expected.getTime()
+    const days = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    return days > 0 ? days : 0
+  }
+
+  // Get aging bucket based on overdue days
+  const getAgingBucket = (overdueDays: number): string => {
+    if (overdueDays === 0) return '-'
+    if (overdueDays <= 30) return '0-30'
+    if (overdueDays <= 60) return '31-60'
+    if (overdueDays <= 90) return '61-90'
+    if (overdueDays <= 180) return '91-180'
+    if (overdueDays <= 365) return '181-365'
+    return '365+'
+  }
+
   // Transform data
   let combinedData: BillWithPatient[] = bills?.map(bill => {
     const patientId = visitPatientMap.get(bill.visit_id) || ''
     const patientName = patientMap.get(patientId) || 'Unknown'
     const claimId = visitClaimMap.get(bill.visit_id) || null
+    const overdueDays = calculateOverdueDays(bill.expected_payment_date)
 
     return {
       id: bill.id,
@@ -327,8 +352,10 @@ export async function getBillsList(options?: {
       nmi: bill.nmi,
       nmi_date: bill.nmi_date,
       nmi_answered: bill.nmi_answered,
-      status: getStatus(bill),
+      status: getStatus(bill, overdueDays),
       bill_age: calculateBillAge(bill.date_of_submission),
+      overdue_days: overdueDays,
+      aging_bucket: getAgingBucket(overdueDays),
     }
   }) || []
 
@@ -395,16 +422,6 @@ export async function getBillDetails(billId: string): Promise<BillWithPatient | 
     }
   }
 
-  // Determine status
-  const getStatus = (): 'pending' | 'received' | 'partial' | 'nmi' => {
-    if (bill.nmi && bill.nmi.trim() !== '' && !bill.nmi_answered) return 'nmi'
-    if (bill.received_date && bill.received_amount) {
-      if (bill.received_amount >= bill.bill_amount) return 'received'
-      return 'partial'
-    }
-    return 'pending'
-  }
-
   // Calculate bill age
   const calculateBillAge = (submissionDate: string | null): number => {
     if (!submissionDate) return 0
@@ -412,6 +429,40 @@ export async function getBillDetails(billId: string): Promise<BillWithPatient | 
     const today = new Date()
     const diffTime = today.getTime() - submission.getTime()
     return Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  }
+
+  // Calculate overdue days from expected payment date
+  const calculateOverdueDays = (expectedPaymentDate: string | null): number => {
+    if (!expectedPaymentDate) return 0
+    const expected = new Date(expectedPaymentDate)
+    const today = new Date()
+    const diffTime = today.getTime() - expected.getTime()
+    const days = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    return days > 0 ? days : 0
+  }
+
+  // Get aging bucket based on overdue days
+  const getAgingBucket = (overdueDays: number): string => {
+    if (overdueDays === 0) return '-'
+    if (overdueDays <= 30) return '0-30'
+    if (overdueDays <= 60) return '31-60'
+    if (overdueDays <= 90) return '61-90'
+    if (overdueDays <= 180) return '91-180'
+    if (overdueDays <= 365) return '181-365'
+    return '365+'
+  }
+
+  const overdueDays = calculateOverdueDays(bill.expected_payment_date)
+
+  // Determine status
+  const getStatus = (): 'pending' | 'received' | 'partial' | 'nmi' | 'overdue' => {
+    if (bill.nmi && bill.nmi.trim() !== '' && !bill.nmi_answered) return 'nmi'
+    if (bill.received_date && bill.received_amount) {
+      if (bill.received_amount >= bill.bill_amount) return 'received'
+      return 'partial'
+    }
+    if (overdueDays > 0) return 'overdue'
+    return 'pending'
   }
 
   return {
@@ -433,5 +484,7 @@ export async function getBillDetails(billId: string): Promise<BillWithPatient | 
     nmi_answered: bill.nmi_answered,
     status: getStatus(),
     bill_age: calculateBillAge(bill.date_of_submission),
+    overdue_days: overdueDays,
+    aging_bucket: getAgingBucket(overdueDays),
   }
 }
