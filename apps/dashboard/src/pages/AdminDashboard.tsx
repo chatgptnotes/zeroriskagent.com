@@ -1,62 +1,55 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../lib/supabase'
-import { getMockDashboardMetrics } from '../services/mockData.service'
-import type { DashboardMetrics } from '../types/database.types'
+import { getBillsList, getRecoverySummary, type BillWithPatient, type RecoverySummary } from '../services/recovery.service'
 
 export default function AdminDashboard() {
-  const { profile, isMockMode } = useAuth()
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const { profile } = useAuth()
+  const [bills, setBills] = useState<BillWithPatient[]>([])
+  const [summary, setSummary] = useState<RecoverySummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [hospitalStats, setHospitalStats] = useState({
-    totalStaff: 0,
-    activeClaims: 0,
-    monthlyRecovery: 0,
-    pendingApprovals: 0
-  })
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
-    fetchDashboardMetrics()
-    fetchHospitalStats()
-  }, [isMockMode])
+    fetchDashboardData()
+  }, [])
 
-  async function fetchDashboardMetrics() {
+  async function fetchDashboardData() {
     try {
       setLoading(true)
       setError(null)
-      
-      if (isMockMode) {
-        const { data, error } = await getMockDashboardMetrics()
-        if (error) throw new Error(error)
-        setMetrics(data)
-      } else {
-        const { data, error } = await supabase
-          .from('dashboard_metrics')
-          .select('*')
-          .limit(1)
-          .single()
 
-        if (error) throw error
-        setMetrics(data)
-      }
+      const [billsResult, summaryResult] = await Promise.all([
+        getBillsList({ limit: 50 }),
+        getRecoverySummary()
+      ])
+
+      setBills(billsResult.data)
+      setTotalCount(billsResult.count)
+      setSummary(summaryResult)
     } catch (err) {
-      console.error('Error fetching metrics:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard metrics')
+      console.error('Error fetching dashboard data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data')
     } finally {
       setLoading(false)
     }
   }
 
-  async function fetchHospitalStats() {
-    if (isMockMode) {
-      setHospitalStats({
-        totalStaff: 8,
-        activeClaims: 45,
-        monthlyRecovery: 850000,
-        pendingApprovals: 12
-      })
-    }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-'
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
   }
 
   if (loading) {
@@ -79,7 +72,7 @@ export default function AdminDashboard() {
             <h2 className="text-xl font-semibold text-red-600">Error Loading Dashboard</h2>
           </div>
           <p className="text-gray-700 mb-4">{error}</p>
-          <button onClick={fetchDashboardMetrics} className="btn-primary w-full">
+          <button onClick={fetchDashboardData} className="btn-primary w-full">
             <span className="material-icon" style={{ fontSize: '20px' }}>refresh</span>
             Retry
           </button>
@@ -116,85 +109,112 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Hospital Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <HospitalCard
-            icon="people"
-            iconColor="blue"
-            value={hospitalStats.totalStaff}
-            label="Total Staff"
-            subtext="Hospital team members"
-          />
-          <HospitalCard
-            icon="receipt_long"
-            iconColor="orange"
-            value={hospitalStats.activeClaims}
-            label="Active Claims"
-            subtext="Under processing"
-          />
-          <HospitalCard
-            icon="payments"
-            iconColor="green"
-            value={`₹${(hospitalStats.monthlyRecovery / 100000).toFixed(1)}L`}
-            label="Monthly Recovery"
-            subtext="This month"
-          />
-          <HospitalCard
-            icon="pending_actions"
-            iconColor="purple"
-            value={hospitalStats.pendingApprovals}
-            label="Pending Approvals"
-            subtext="Require your review"
-          />
-        </div>
 
-        {/* Financial Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="material-icon text-primary-600">account_balance_wallet</span>
-              Financial Performance
+        {/* Summary Cards */}
+        {summary && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <HospitalCard
+              icon="assessment"
+              iconColor="blue"
+              value={summary.totalBills}
+              label="Total Bills"
+              subtext={formatCurrency(summary.totalAmount)}
+            />
+            <HospitalCard
+              icon="pending"
+              iconColor="orange"
+              value={summary.pendingBills}
+              label="Pending Bills"
+              subtext={formatCurrency(summary.pendingAmount)}
+            />
+            <HospitalCard
+              icon="check_circle"
+              iconColor="green"
+              value={summary.receivedBills}
+              label="Received Bills"
+              subtext={formatCurrency(summary.receivedAmount)}
+            />
+            <HospitalCard
+              icon="warning"
+              iconColor="red"
+              value={summary.nmiCount}
+              label="NMI Cases"
+              subtext={formatCurrency(summary.deductionAmount) + ' deductions'}
+            />
+          </div>
+        )}
+
+        {/* Claims Table */}
+        <div className="card mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <span className="material-icon text-primary-600">receipt_long</span>
+              Claims List ({totalCount} total)
             </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Total Claims Value</span>
-                <span className="text-lg font-semibold">₹{metrics?.total_claimed?.toLocaleString() || '0'}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <span className="text-sm text-gray-600">Total Recovered</span>
-                <span className="text-lg font-semibold text-green-600">₹{metrics?.total_recovery_value?.toLocaleString() || '0'}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
-                <span className="text-sm text-gray-600">Net Recovery (75%)</span>
-                <span className="text-lg font-semibold text-blue-600">₹{((metrics?.total_recovery_value || 0) * 0.75)?.toLocaleString()}</span>
-              </div>
-            </div>
+            <button onClick={fetchDashboardData} className="btn-secondary">
+              <span className="material-icon" style={{ fontSize: '18px' }}>refresh</span>
+              Refresh
+            </button>
           </div>
 
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="material-icon text-primary-600">timeline</span>
-              Recovery Insights
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Recovery Rate</span>
-                <span className="text-lg font-semibold text-green-600">
-                  {metrics && metrics.total_claims > 0 
-                    ? `${((metrics.total_recovery_value / metrics.total_claimed) * 100).toFixed(1)}%`
-                    : '0%'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Average Processing Time</span>
-                <span className="text-lg font-semibold">28 days</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Success Rate</span>
-                <span className="text-lg font-semibold text-green-600">72%</span>
-              </div>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Claim ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Patient Name</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Amount</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Bill Age</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Submission Date</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bills.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-500">
+                      <span className="material-icon text-gray-300 mb-2" style={{ fontSize: '48px' }}>inbox</span>
+                      <p>No claims found</p>
+                    </td>
+                  </tr>
+                ) : (
+                  bills.map((bill) => (
+                    <tr key={bill.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <span className="text-sm font-medium text-primary-600">
+                          {bill.claim_id || bill.visit_id}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-900">{bill.patient_name}</span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(bill.bill_amount)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`text-sm font-medium ${
+                          bill.bill_age > 90 ? 'text-red-600' :
+                          bill.bill_age > 60 ? 'text-orange-600' :
+                          bill.bill_age > 30 ? 'text-yellow-600' : 'text-gray-600'
+                        }`}>
+                          {bill.bill_age} days
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">
+                          {formatDate(bill.date_of_submission)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <StatusBadge status={bill.status} />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -220,13 +240,6 @@ export default function AdminDashboard() {
                 </span>
                 <span className="material-icon">arrow_forward</span>
               </a>
-              <button className="btn-secondary w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '20px' }}>upload</span>
-                  Upload New Claims
-                </span>
-                <span className="material-icon">arrow_forward</span>
-              </button>
             </div>
           </div>
 
@@ -243,55 +256,7 @@ export default function AdminDashboard() {
                 </span>
                 <span className="material-icon">arrow_forward</span>
               </a>
-              <button className="btn-secondary w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '20px' }}>person_add</span>
-                  Add New Staff
-                </span>
-                <span className="material-icon">arrow_forward</span>
-              </button>
-              <button className="btn-secondary w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '20px' }}>assignment</span>
-                  Staff Reports
-                </span>
-                <span className="material-icon">arrow_forward</span>
-              </button>
             </div>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="material-icon text-primary-600">notifications</span>
-            Recent Hospital Activity
-          </h3>
-          <div className="space-y-3">
-            <ActivityItem 
-              icon="check_circle" 
-              text="CGHS claim #12345 approved - ₹25,000 recovered" 
-              time="1 hour ago"
-              type="success"
-            />
-            <ActivityItem 
-              icon="pending" 
-              text="ESIC appeal submitted for claim #12346" 
-              time="3 hours ago"
-              type="info"
-            />
-            <ActivityItem 
-              icon="person" 
-              text="New billing staff member added: Priya Sharma" 
-              time="5 hours ago"
-              type="info"
-            />
-            <ActivityItem 
-              icon="upload" 
-              text="15 new claims uploaded by billing team" 
-              time="1 day ago"
-              type="success"
-            />
           </div>
         </div>
       </main>
@@ -324,6 +289,7 @@ function HospitalCard({
     green: 'text-green-600',
     purple: 'text-purple-600',
     orange: 'text-orange-600',
+    red: 'text-red-600',
   }
 
   return (
@@ -338,33 +304,19 @@ function HospitalCard({
   )
 }
 
-function ActivityItem({
-  icon,
-  text,
-  time,
-  type
-}: {
-  icon: string
-  text: string
-  time: string
-  type: 'success' | 'info' | 'warning' | 'error'
-}) {
-  const typeClasses = {
-    success: 'text-green-600 bg-green-50',
-    info: 'text-blue-600 bg-blue-50',
-    warning: 'text-orange-600 bg-orange-50',
-    error: 'text-red-600 bg-red-50'
+function StatusBadge({ status }: { status: string }) {
+  const statusConfig: Record<string, { label: string; color: string }> = {
+    pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
+    received: { label: 'Received', color: 'bg-green-100 text-green-800' },
+    partial: { label: 'Partial', color: 'bg-blue-100 text-blue-800' },
+    nmi: { label: 'NMI', color: 'bg-red-100 text-red-800' },
   }
 
+  const config = statusConfig[status] || { label: status, color: 'bg-gray-100 text-gray-800' }
+
   return (
-    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${typeClasses[type]}`}>
-        <span className="material-icon" style={{ fontSize: '18px' }}>{icon}</span>
-      </div>
-      <div className="flex-1">
-        <p className="text-sm text-gray-900">{text}</p>
-        <p className="text-xs text-gray-500">{time}</p>
-      </div>
-    </div>
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+      {config.label}
+    </span>
   )
 }

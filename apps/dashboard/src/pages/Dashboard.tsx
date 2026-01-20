@@ -1,44 +1,56 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../lib/supabase'
-import { getMockDashboardMetrics } from '../services/mockData.service'
-import type { DashboardMetrics } from '../types/database.types'
+import { getBillsList, getRecoverySummary, type BillWithPatient, type RecoverySummary } from '../services/recovery.service'
 
 export default function Dashboard() {
-  const { isMockMode } = useAuth()
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const { profile } = useAuth()
+  const [bills, setBills] = useState<BillWithPatient[]>([])
+  const [summary, setSummary] = useState<RecoverySummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [totalCount, setTotalCount] = useState(0)
 
   useEffect(() => {
-    fetchDashboardMetrics()
-  }, [isMockMode])
+    fetchDashboardData()
+  }, [])
 
-  async function fetchDashboardMetrics() {
+  async function fetchDashboardData() {
     try {
       setLoading(true)
       setError(null)
-      
-      if (isMockMode) {
-        const { data, error } = await getMockDashboardMetrics()
-        if (error) throw new Error(error)
-        setMetrics(data)
-      } else {
-        const { data, error } = await supabase
-          .from('dashboard_metrics')
-          .select('*')
-          .limit(1)
-          .single()
 
-        if (error) throw error
-        setMetrics(data)
-      }
+      // Fetch bills list and summary in parallel
+      const [billsResult, summaryResult] = await Promise.all([
+        getBillsList({ limit: 50 }),
+        getRecoverySummary()
+      ])
+
+      setBills(billsResult.data)
+      setTotalCount(billsResult.count)
+      setSummary(summaryResult)
     } catch (err) {
-      console.error('Error fetching metrics:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard metrics')
+      console.error('Error fetching dashboard data:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data')
     } finally {
       setLoading(false)
     }
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-'
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
   }
 
   if (loading) {
@@ -52,43 +64,22 @@ export default function Dashboard() {
     )
   }
 
-  if (error || !metrics) {
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="card max-w-md">
           <div className="flex items-center gap-3 mb-4">
             <span className="material-icon text-red-600">error</span>
-            <h2 className="text-xl font-semibold text-red-600">Configuration Required</h2>
+            <h2 className="text-xl font-semibold text-red-600">Error Loading Dashboard</h2>
           </div>
-          <p className="text-gray-700 mb-4">
-            {error || 'Unable to load dashboard metrics. Please ensure Supabase is configured correctly.'}
-          </p>
-          <div className="bg-gray-50 p-4 rounded text-sm">
-            <p className="font-medium mb-2">To get started:</p>
-            <ol className="list-decimal list-inside space-y-1 text-gray-600">
-              <li>Create a Supabase project at <a href="https://supabase.com" className="text-primary-600 underline" target="_blank" rel="noopener noreferrer">supabase.com</a></li>
-              <li>Run the migrations from <code className="bg-gray-200 px-1 rounded">supabase/migrations/</code></li>
-              <li>Run the seed data from <code className="bg-gray-200 px-1 rounded">supabase/seed.sql</code></li>
-              <li>Set environment variables in <code className="bg-gray-200 px-1 rounded">.env</code></li>
-            </ol>
-          </div>
-          <div className="mt-4">
-            <a href="/" className="btn-primary w-full justify-center">
-              <span className="material-icon" style={{ fontSize: '20px' }}>home</span>
-              Back to Home
-            </a>
-          </div>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <button onClick={fetchDashboardData} className="btn-primary w-full">
+            <span className="material-icon" style={{ fontSize: '20px' }}>refresh</span>
+            Retry
+          </button>
         </div>
       </div>
     )
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount)
   }
 
   return (
@@ -107,15 +98,9 @@ export default function Dashboard() {
               </a>
             </div>
             <div className="flex items-center gap-4">
-              {isMockMode && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1 rounded-md text-xs flex items-center gap-1">
-                  <span className="material-icon text-sm">info</span>
-                  Mock Data Mode
-                </div>
-              )}
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{metrics.hospital_name}</p>
-                <p className="text-xs text-gray-500">Admin Dashboard</p>
+                <p className="text-sm font-medium text-gray-900">{profile?.full_name || 'Hope Hospital User'}</p>
+                <p className="text-xs text-gray-500">{profile?.role || 'hospital admin'}</p>
               </div>
               <button className="btn-secondary">
                 <span className="material-icon" style={{ fontSize: '20px' }}>account_circle</span>
@@ -128,108 +113,117 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Claims */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-2">
-              <span className="material-icon text-blue-600">assessment</span>
-              <span className="text-2xl font-bold">{metrics.total_claims}</span>
-            </div>
-            <p className="text-sm text-gray-600">Total Claims</p>
-            <p className="text-xs text-gray-500 mt-1">{formatCurrency(metrics.total_claimed)} claimed</p>
-          </div>
-
-          {/* Denied Claims */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-2">
-              <span className="material-icon text-red-600">cancel</span>
-              <span className="text-2xl font-bold">{metrics.denied_claims}</span>
-            </div>
-            <p className="text-sm text-gray-600">Denied Claims</p>
-            <p className="text-xs text-gray-500 mt-1">{formatCurrency(metrics.total_denied_amount)} denied</p>
-          </div>
-
-          {/* Recovered Amount */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-2">
-              <span className="material-icon text-green-600">trending_up</span>
-              <span className="text-2xl font-bold">{formatCurrency(metrics.total_recovery_value)}</span>
-            </div>
-            <p className="text-sm text-gray-600">Total Recovered</p>
-            <p className="text-xs text-green-600 mt-1">+{metrics.recovered_claims} claims</p>
-          </div>
-
-          {/* Hospital Net Recovery */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-2">
-              <span className="material-icon text-purple-600">account_balance_wallet</span>
-              <span className="text-2xl font-bold">{formatCurrency(metrics.total_hospital_recovered)}</span>
-            </div>
-            <p className="text-sm text-gray-600">Your Net Recovery</p>
-            <p className="text-xs text-gray-500 mt-1">After {formatCurrency(metrics.total_agent_fees)} agent fee</p>
-          </div>
-        </div>
-
-        {/* Main Stats Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Claim Status Breakdown */}
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="material-icon text-primary-600">pie_chart</span>
-              Claim Status Breakdown
-            </h3>
-            <div className="space-y-3">
-              <StatusBar label="Submitted" count={metrics.submitted_claims} total={metrics.total_claims} color="blue" />
-              <StatusBar label="Under Review" count={metrics.under_review_claims} total={metrics.total_claims} color="yellow" />
-              <StatusBar label="Approved" count={metrics.approved_claims} total={metrics.total_claims} color="green" />
-              <StatusBar label="Denied" count={metrics.denied_claims} total={metrics.total_claims} color="red" />
-              <StatusBar label="Appealed" count={metrics.appealed_claims} total={metrics.total_claims} color="orange" />
-              <StatusBar label="Recovered" count={metrics.recovered_claims} total={metrics.total_claims} color="emerald" />
-            </div>
-          </div>
-
-          {/* Recovery Performance */}
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="material-icon text-primary-600">show_chart</span>
-              Recovery Performance
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Appeal Rate</span>
-                <span className="text-lg font-semibold text-primary-600">{metrics.appeal_rate_percentage}%</span>
+        {summary && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="card">
+              <div className="flex items-center justify-between mb-2">
+                <span className="material-icon text-blue-600">assessment</span>
+                <span className="text-2xl font-bold">{summary.totalBills}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Appeal Success Rate</span>
-                <span className="text-lg font-semibold text-green-600">{metrics.appeal_success_rate_percentage}%</span>
+              <p className="text-sm text-gray-600">Total Bills</p>
+              <p className="text-xs text-gray-500 mt-1">{formatCurrency(summary.totalAmount)} total</p>
+            </div>
+
+            <div className="card">
+              <div className="flex items-center justify-between mb-2">
+                <span className="material-icon text-orange-600">pending</span>
+                <span className="text-2xl font-bold">{summary.pendingBills}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Total Appeals</span>
-                <span className="text-lg font-semibold">{metrics.total_appeals}</span>
+              <p className="text-sm text-gray-600">Pending Bills</p>
+              <p className="text-xs text-gray-500 mt-1">{formatCurrency(summary.pendingAmount)} pending</p>
+            </div>
+
+            <div className="card">
+              <div className="flex items-center justify-between mb-2">
+                <span className="material-icon text-green-600">check_circle</span>
+                <span className="text-2xl font-bold">{summary.receivedBills}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Successful Appeals</span>
-                <span className="text-lg font-semibold text-green-600">{metrics.successful_appeals}</span>
+              <p className="text-sm text-gray-600">Received Bills</p>
+              <p className="text-xs text-green-600 mt-1">{formatCurrency(summary.receivedAmount)} received</p>
+            </div>
+
+            <div className="card">
+              <div className="flex items-center justify-between mb-2">
+                <span className="material-icon text-red-600">warning</span>
+                <span className="text-2xl font-bold">{summary.nmiCount}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Recoverable Amount</span>
-                <span className="text-lg font-semibold text-orange-600">{formatCurrency(metrics.recoverable_amount)}</span>
-              </div>
+              <p className="text-sm text-gray-600">NMI Cases</p>
+              <p className="text-xs text-gray-500 mt-1">{formatCurrency(summary.deductionAmount)} deductions</p>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Aging Analysis */}
+        {/* Claims Table */}
         <div className="card">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="material-icon text-primary-600">schedule</span>
-            Claim Aging Analysis
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <AgingCard label="Average Age" value={`${metrics.avg_aged_days} days`} icon="timer" />
-            <AgingCard label="Over 30 Days" value={metrics.aged_over_30_days.toString()} icon="warning" color="yellow" />
-            <AgingCard label="Over 60 Days" value={metrics.aged_over_60_days.toString()} icon="error_outline" color="orange" />
-            <AgingCard label="Over 90 Days" value={metrics.aged_over_90_days.toString()} icon="dangerous" color="red" />
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <span className="material-icon text-primary-600">receipt_long</span>
+              Claims List ({totalCount} total)
+            </h3>
+            <button onClick={fetchDashboardData} className="btn-secondary">
+              <span className="material-icon" style={{ fontSize: '18px' }}>refresh</span>
+              Refresh
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Claim ID</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Patient Name</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Amount</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Bill Age</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Submission Date</th>
+                  <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bills.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-500">
+                      <span className="material-icon text-gray-300 mb-2" style={{ fontSize: '48px' }}>inbox</span>
+                      <p>No claims found</p>
+                    </td>
+                  </tr>
+                ) : (
+                  bills.map((bill) => (
+                    <tr key={bill.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <span className="text-sm font-medium text-primary-600">
+                          {bill.claim_id || bill.visit_id}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-900">{bill.patient_name}</span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span className="text-sm font-semibold text-gray-900">
+                          {formatCurrency(bill.bill_amount)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`text-sm font-medium ${
+                          bill.bill_age > 90 ? 'text-red-600' :
+                          bill.bill_age > 60 ? 'text-orange-600' :
+                          bill.bill_age > 30 ? 'text-yellow-600' : 'text-gray-600'
+                        }`}>
+                          {bill.bill_age} days
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-600">
+                          {formatDate(bill.date_of_submission)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <StatusBadge status={bill.status} />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </main>
@@ -237,57 +231,26 @@ export default function Dashboard() {
       {/* Footer */}
       <footer className="mt-16 py-6 border-t border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-gray-400">
-          <p>Version 1.1 • Last Updated: 2026-01-11 • zeroriskagent.com</p>
+          <p>Version 1.2 | Last Updated: 2026-01-20 | zeroriskagent.com</p>
         </div>
       </footer>
     </div>
   )
 }
 
-function StatusBar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
-  const percentage = total > 0 ? (count / total) * 100 : 0
-  const colorClasses = {
-    blue: 'bg-blue-500',
-    yellow: 'bg-yellow-500',
-    green: 'bg-green-500',
-    red: 'bg-red-500',
-    orange: 'bg-orange-500',
-    emerald: 'bg-emerald-500',
+function StatusBadge({ status }: { status: string }) {
+  const statusConfig: Record<string, { label: string; color: string }> = {
+    pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
+    received: { label: 'Received', color: 'bg-green-100 text-green-800' },
+    partial: { label: 'Partial', color: 'bg-blue-100 text-blue-800' },
+    nmi: { label: 'NMI', color: 'bg-red-100 text-red-800' },
   }
 
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-sm text-gray-700">{label}</span>
-        <span className="text-sm font-medium">{count}</span>
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div
-          className={`h-2 rounded-full ${colorClasses[color as keyof typeof colorClasses]}`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
-  )
-}
-
-function AgingCard({ label, value, icon, color = 'gray' }: { label: string; value: string; icon: string; color?: string }) {
-  const colorClasses = {
-    gray: 'text-gray-600',
-    yellow: 'text-yellow-600',
-    orange: 'text-orange-600',
-    red: 'text-red-600',
-  }
+  const config = statusConfig[status] || { label: status, color: 'bg-gray-100 text-gray-800' }
 
   return (
-    <div className="bg-gray-50 p-4 rounded-lg">
-      <div className="flex items-center gap-2 mb-2">
-        <span className={`material-icon ${colorClasses[color as keyof typeof colorClasses]}`} style={{ fontSize: '20px' }}>
-          {icon}
-        </span>
-        <span className="text-xs text-gray-600">{label}</span>
-      </div>
-      <p className="text-2xl font-bold">{value}</p>
-    </div>
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+      {config.label}
+    </span>
   )
 }
