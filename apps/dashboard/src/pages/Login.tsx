@@ -169,23 +169,26 @@ export default function Login() {
               </span>
             </div>
 
-            {isMockMode && (
-              <div className="border-t border-gray-200 pt-4">
-                <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md text-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="material-icon">info</span>
-                    <strong>Mock Authentication Mode</strong>
-                  </div>
-                  <p className="text-xs mb-2">No database required - using local authentication</p>
-                  <div className="space-y-1 text-xs">
-                    <div><strong>Super Admin:</strong> admin@hopehospital.com / admin123</div>
-                    <div><strong>Hospital Admin:</strong> hope@hopehospital.com / hope123</div>
-                    <div><strong>Staff:</strong> staff@hopehospital.com / staff123</div>
-                    <div><strong>Doctor:</strong> doctor@hopehospital.com / doctor123</div>
-                  </div>
+            <div className="border-t border-gray-200 pt-4">
+              <div className={`${isMockMode ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-green-50 border-green-200 text-green-700'} px-4 py-3 rounded-md text-sm`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="material-icon">info</span>
+                  <strong>{isMockMode ? 'Mock Authentication Mode' : 'Database Authentication Mode'}</strong>
+                </div>
+                <p className="text-xs mb-2">
+                  {isMockMode 
+                    ? 'No database required - using local authentication'
+                    : 'Using zero_login_user database table'
+                  }
+                </p>
+                <div className="space-y-1 text-xs">
+                  <div><strong>Super Admin:</strong> admin@hopehospital.com / admin123</div>
+                  <div><strong>Hospital Admin:</strong> hope@hopehospital.com / hope123</div>
+                  <div><strong>Staff:</strong> staff@hopehospital.com / staff123</div>
+                  {isMockMode && <div><strong>Doctor:</strong> doctor@hopehospital.com / doctor123</div>}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </form>
 

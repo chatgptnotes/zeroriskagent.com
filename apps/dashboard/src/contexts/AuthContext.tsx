@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { User as SupabaseUser, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { mockAuth, MockUser, MockUserProfile, MockSession } from '../services/mockAuth.service'
+import { supabaseAuth, ZeroLoginUser } from '../services/supabaseAuth.service'
 
 export interface UserProfile {
   id: string
@@ -19,7 +20,7 @@ export interface UserProfile {
 }
 
 interface AuthContextType {
-  user: SupabaseUser | MockUser | null
+  user: SupabaseUser | MockUser | ZeroLoginUser | null
   profile: UserProfile | null
   session: Session | MockSession | null
   loading: boolean
@@ -42,7 +43,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<SupabaseUser | MockUser | null>(null)
+  const [user, setUser] = useState<SupabaseUser | MockUser | ZeroLoginUser | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [session, setSession] = useState<Session | MockSession | null>(null)
   const [loading, setLoading] = useState(true)
@@ -50,13 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Check if we should use mock mode (when Supabase is not configured)
   const shouldUseMockMode = () => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-    
-    return !supabaseUrl || 
-           !supabaseKey || 
-           supabaseUrl === 'https://your-project.supabase.co' ||
-           supabaseKey === 'your-anon-key'
+    return !supabaseAuth.isAvailable()
   }
 
   useEffect(() => {
@@ -67,8 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔄 Using Mock Authentication Mode')
       initializeMockAuth()
     } else {
-      console.log('🔄 Using Supabase Authentication')
-      initializeSupabaseAuth()
+      console.log('🔄 Using Database Authentication (zero_login_user)')
+      initializeDatabaseAuth()
     }
   }, [])
 
@@ -90,36 +85,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
   }
 
-  // Initialize Supabase Authentication
-  const initializeSupabaseAuth = () => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
-        setLoading(false)
+  // Initialize Database Authentication (zero_login_user)
+  const initializeDatabaseAuth = () => {
+    const currentUser = supabaseAuth.getCurrentUser()
+    
+    if (currentUser) {
+      setUser(currentUser)
+      const userProfile: UserProfile = {
+        id: currentUser.id,
+        email: currentUser.email,
+        full_name: currentUser.full_name,
+        role: currentUser.role,
+        can_approve_appeals: currentUser.role === 'super_admin' || currentUser.role === 'hospital_admin',
+        can_view_financials: currentUser.role === 'super_admin' || currentUser.role === 'hospital_admin',
+        can_export_data: currentUser.role === 'super_admin' || currentUser.role === 'hospital_admin',
+        status: currentUser.status as 'active' | 'suspended' | 'inactive'
       }
-    })
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
+      setProfile(userProfile)
+    }
+    setLoading(false)
   }
+
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -176,43 +162,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     hospital_id?: string
   }) => {
     if (isMockMode) {
-      const { user: mockUser, error } = await mockAuth.signUp(email, password, userData)
+      const { user: _mockUser, error } = await mockAuth.signUp(email, password, userData)
       return { error: error ? new Error(error) : null }
     }
 
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      })
+    // Use database authentication for signup
+    const { user: _dbUser, error } = await supabaseAuth.signUp(email, password, {
+      full_name: userData.full_name,
+      role: userData.role
+    })
 
-      if (error) return { error }
-
-      if (data.user) {
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            email,
-            full_name: userData.full_name,
-            role: userData.role,
-            hospital_id: userData.hospital_id,
-            can_approve_appeals: userData.role === 'hospital_admin' || userData.role === 'super_admin',
-            can_view_financials: userData.role === 'hospital_admin' || userData.role === 'super_admin',
-            can_export_data: userData.role === 'hospital_admin' || userData.role === 'super_admin',
-          })
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError)
-          return { error: profileError }
-        }
-      }
-
-      return { error: null }
-    } catch (error) {
-      return { error }
+    if (error) {
+      return { error: new Error(error) }
     }
+
+    return { error: null }
   }
 
   const signIn = async (email: string, password: string) => {
@@ -226,22 +190,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: error ? new Error(error) : null }
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    return { error }
+    // Use database authentication
+    const { user: dbUser, error } = await supabaseAuth.signIn(email, password)
+    
+    if (error) {
+      return { error: new Error(error) }
+    }
+
+    if (dbUser) {
+      setUser(dbUser)
+      const userProfile: UserProfile = {
+        id: dbUser.id,
+        email: dbUser.email,
+        full_name: dbUser.full_name,
+        role: dbUser.role,
+        can_approve_appeals: dbUser.role === 'super_admin' || dbUser.role === 'hospital_admin',
+        can_view_financials: dbUser.role === 'super_admin' || dbUser.role === 'hospital_admin',
+        can_export_data: dbUser.role === 'super_admin' || dbUser.role === 'hospital_admin',
+        status: dbUser.status as 'active' | 'suspended' | 'inactive'
+      }
+      setProfile(userProfile)
+    }
+
+    return { error: null }
   }
 
   const signOut = async () => {
     if (isMockMode) {
       await mockAuth.signOut()
-      setSession(null)
-      setUser(null)
-      setProfile(null)
     } else {
-      await supabase.auth.signOut()
+      await supabaseAuth.signOut()
     }
+    setSession(null)
+    setUser(null)
+    setProfile(null)
   }
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
