@@ -11,6 +11,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import StaffDashboard from './pages/StaffDashboard'
 import RecoveryDashboard from './pages/RecoveryDashboard'
 import NMITracker from './pages/NMITracker'
+import Upload from './pages/Upload'
 import UserManagement from './pages/UserManagement'
 
 function App() {
@@ -66,7 +67,14 @@ function App() {
               <NMITracker />
             </ProtectedRoute>
           } />
-          
+
+          <Route path="/upload" element={
+            <ProtectedRoute>
+              <Navigation />
+              <Upload />
+            </ProtectedRoute>
+          } />
+
           <Route path="/users" element={
             <ProtectedRoute requiredRole={['hospital_admin', 'super_admin']}>
               <Navigation />

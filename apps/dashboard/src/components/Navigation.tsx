@@ -35,6 +35,12 @@ export default function Navigation() {
       show: true
     },
     {
+      path: '/upload',
+      label: 'Upload',
+      icon: 'upload_file',
+      show: true
+    },
+    {
       path: '/users',
       label: 'Users',
       icon: 'people',
