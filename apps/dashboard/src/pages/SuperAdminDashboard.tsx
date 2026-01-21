@@ -109,11 +109,139 @@ export default function SuperAdminDashboard() {
   const [esicData, setEsicData] = useState<ESICClaimsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [tempData, setTempData] = useState<ESICClaimsData | null>(null)
+  const [isUsingTempData, setIsUsingTempData] = useState(false)
+  const [availableDates, setAvailableDates] = useState<string[]>([])
+  const [selectedDate, setSelectedDate] = useState<string>('')
 
-  // Fetch latest ESIC data from database
+  // Check for temporary data first, then fetch from database
   useEffect(() => {
+    checkForTempData()
+    fetchAvailableDates()
     fetchLatestESICData()
   }, [])
+
+  // Fetch data when selected date changes
+  useEffect(() => {
+    if (selectedDate) {
+      fetchDataByDate(selectedDate)
+    }
+  }, [selectedDate])
+
+  const checkForTempData = () => {
+    try {
+      const tempESICData = localStorage.getItem('tempESICData')
+      if (tempESICData) {
+        const parsedData = JSON.parse(tempESICData)
+        setTempData(parsedData)
+        setIsUsingTempData(true)
+        setSelectedHospital(parsedData.hospitalName)
+        // Clear temp data after use
+        localStorage.removeItem('tempESICData')
+      }
+    } catch (error) {
+      console.error('Error parsing temp ESIC data:', error)
+    }
+  }
+
+  const saveTempDataToDatabase = async () => {
+    if (!tempData) return
+
+    try {
+      console.log('Saving temp data:', tempData)
+      
+      const { data, error } = await supabase
+        .from('esic_claims_extractions')
+        .insert({
+          hospital_name: tempData.hospitalName,
+          extracted_at: tempData.extractedAt,
+          total_claims: tempData.totalClaims,
+          stage_data: tempData.stageData
+          // Don't set created_at - let database use DEFAULT NOW()
+          // Don't set upload_id - it's optional and we don't have it
+        })
+        .select()
+
+      if (error) {
+        console.error('Detailed error saving temp data:', error)
+        alert(`Failed to save data: ${error.message}`)
+      } else {
+        console.log('Temp data saved successfully:', data)
+        setEsicData(tempData)
+        setTempData(null)
+        setIsUsingTempData(false)
+        // Refresh available dates
+        fetchAvailableDates()
+        alert('Data saved to database successfully!')
+      }
+    } catch (error) {
+      console.error('Catch block error:', error)
+      alert(`Failed to save data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  const fetchAvailableDates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('esic_claims_extractions')
+        .select('extracted_at')
+        .order('extracted_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching available dates:', error)
+        return
+      }
+
+      if (data && data.length > 0) {
+        const dates = data.map(item => 
+          new Date(item.extracted_at).toISOString().split('T')[0]
+        )
+        const uniqueDates = [...new Set(dates)]
+        setAvailableDates(uniqueDates)
+      }
+    } catch (error) {
+      console.error('Error fetching available dates:', error)
+    }
+  }
+
+  const fetchDataByDate = async (date: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const startOfDay = `${date}T00:00:00Z`
+      const endOfDay = `${date}T23:59:59Z`
+
+      const { data, error: fetchError } = await supabase
+        .from('esic_claims_extractions')
+        .select('*')
+        .gte('extracted_at', startOfDay)
+        .lte('extracted_at', endOfDay)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError
+      }
+
+      if (data) {
+        setEsicData({
+          hospitalName: data.hospital_name,
+          extractedAt: data.extracted_at,
+          totalClaims: data.total_claims,
+          stageData: data.stage_data
+        })
+      } else {
+        setEsicData(null)
+      }
+    } catch (err) {
+      console.error('Error fetching ESIC data by date:', err)
+      setError('Failed to load data for selected date')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchLatestESICData = async () => {
     try {
@@ -151,9 +279,10 @@ export default function SuperAdminDashboard() {
     }
   }
 
-  // Use extracted data if available, otherwise fall back to dummy data
-  const claimsData = esicData ? esicData.stageData : dummyClaimsData
-  const totalClaims = esicData ? esicData.totalClaims : 
+  // Use temp data first, then database data, then dummy data
+  const activeData = tempData || esicData
+  const claimsData = activeData ? activeData.stageData : dummyClaimsData
+  const totalClaims = activeData ? activeData.totalClaims : 
     dummyClaimsData.reduce((acc, stage) => {
       stage.statuses.forEach(status => {
         acc.inPatient += status.inPatient
@@ -192,21 +321,63 @@ export default function SuperAdminDashboard() {
               <option value="City Care Hospital Delhi">City Care Hospital Delhi</option>
               <option value="Metro Clinic Bangalore">Metro Clinic Bangalore</option>
             </select>
+            {availableDates.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">View Date:</span>
+                <select 
+                  className="bg-blue-100 border border-gray-400 rounded px-3 py-1 text-sm font-medium"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                >
+                  <option value="">Latest Data</option>
+                  {availableDates.map((date) => (
+                    <option key={date} value={date}>
+                      {new Date(date).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-gray-700">Hospital</span>
             <div className="flex items-center gap-3">
-              {esicData && (
+              {tempData && (
+                <div className="flex items-center gap-2 bg-blue-100 px-3 py-1 rounded-full">
+                  <span className="material-icon text-blue-600" style={{ fontSize: '16px' }}>preview</span>
+                  <span className="text-xs text-blue-700 font-medium">Extracted Data</span>
+                </div>
+              )}
+              {!tempData && esicData && selectedDate && (
+                <div className="flex items-center gap-2 bg-purple-100 px-3 py-1 rounded-full">
+                  <span className="material-icon text-purple-600" style={{ fontSize: '16px' }}>history</span>
+                  <span className="text-xs text-purple-700 font-medium">Historical Data</span>
+                </div>
+              )}
+              {!tempData && esicData && !selectedDate && (
                 <div className="flex items-center gap-2 bg-green-100 px-3 py-1 rounded-full">
                   <span className="material-icon text-green-600" style={{ fontSize: '16px' }}>check_circle</span>
                   <span className="text-xs text-green-700 font-medium">Live Data</span>
                 </div>
               )}
-              {!esicData && (
+              {!tempData && !esicData && (
                 <div className="flex items-center gap-2 bg-yellow-100 px-3 py-1 rounded-full">
                   <span className="material-icon text-yellow-600" style={{ fontSize: '16px' }}>info</span>
                   <span className="text-xs text-yellow-700 font-medium">Demo Data</span>
                 </div>
+              )}
+              {tempData && (
+                <button 
+                  onClick={saveTempDataToDatabase}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded text-sm font-medium flex items-center gap-2"
+                >
+                  <span className="material-icon" style={{ fontSize: '16px' }}>save</span>
+                  SAVE DATA
+                </button>
               )}
               <button 
                 onClick={fetchLatestESICData}
@@ -252,16 +423,16 @@ export default function SuperAdminDashboard() {
                       {status.status}
                     </td>
                     <td className="border-r border-gray-400 px-4 py-3 text-center text-gray-700">
-                      {status.inPatient === 0 ? '' : status.inPatient}
+                      {status.inPatient}
                     </td>
                     <td className="border-r border-gray-400 px-4 py-3 text-center text-gray-700">
-                      {status.opd === 0 ? '' : status.opd}
+                      {status.opd}
                     </td>
                     <td className="border-r border-gray-400 px-4 py-3 text-center text-gray-700">
-                      {status.counts === 0 ? '' : status.counts}
+                      {status.counts}
                     </td>
                     <td className="px-4 py-3 text-center text-gray-700">
-                      {status.enhancement === 0 ? '' : status.enhancement}
+                      {status.enhancement}
                     </td>
                   </tr>
                 ))
@@ -300,13 +471,25 @@ export default function SuperAdminDashboard() {
       <footer className="mt-8 py-6 border-t border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-gray-400">
           <p>v1.7 | Last Updated: 2026-01-21 | zeroriskagent.com | ESIC Claims Tracking System</p>
-          {esicData && (
+          {tempData && (
+            <p className="mt-1 text-blue-600">
+              Extracted data from upload • Data not yet saved to database • 
+              Click "SAVE DATA" to store permanently
+            </p>
+          )}
+          {!tempData && esicData && selectedDate && (
+            <p className="mt-1 text-purple-600">
+              Historical data from {new Date(esicData.extractedAt).toLocaleDateString('en-IN')} • 
+              Select "Latest Data" to view current data
+            </p>
+          )}
+          {!tempData && esicData && !selectedDate && (
             <p className="mt-1 text-green-600">
               Data extracted on {new Date(esicData.extractedAt).toLocaleDateString('en-IN')} • 
               Upload new ESIC dashboard image to update
             </p>
           )}
-          {!esicData && (
+          {!tempData && !esicData && (
             <p className="mt-1 text-yellow-600">
               Demo data • Upload ESIC dashboard image at <a href="/upload" className="underline hover:text-yellow-700">/upload</a> for live data
             </p>

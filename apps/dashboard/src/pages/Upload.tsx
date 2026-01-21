@@ -98,8 +98,7 @@ export default function Upload() {
         setNmiHospitalName(nmiResult.hospitalName)
         setExtractionConfidence(nmiResult.confidence)
 
-        // Save NMI data to database
-        await saveNMIDataToDatabase(nmiResult.records, nmiResult.hospitalName)
+        // Note: Data is not auto-saved, user can save manually from dashboard
       } else {
         // Try ESIC stage dashboard extraction
         const esicResult = await extractESICClaimsFromImage(file)
@@ -110,8 +109,7 @@ export default function Upload() {
           setEsicData(esicResult.data)
           setExtractionConfidence(esicResult.confidence)
 
-          // Save to database
-          await saveESICDataToDatabase(esicResult.data)
+          // Note: Data is not auto-saved, user can save manually from dashboard
         } else {
           // Fall back to general record extraction
           setIsESICDashboard(false)
@@ -612,13 +610,17 @@ export default function Upload() {
                     <span className="text-sm text-gray-500">
                       {esicData.hospitalName}
                     </span>
-                    <a
-                      href="/dashboard/super-admin"
+                    <button
+                      onClick={() => {
+                        // Store extracted data temporarily for dashboard
+                        localStorage.setItem('tempESICData', JSON.stringify(esicData))
+                        window.location.href = '/dashboard/super-admin'
+                      }}
                       className="text-xs bg-primary-600 text-white px-3 py-1.5 rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-1"
                     >
                       <span className="material-icon" style={{ fontSize: '14px' }}>dashboard</span>
                       View in Dashboard
-                    </a>
+                    </button>
                   </div>
                 </div>
 
