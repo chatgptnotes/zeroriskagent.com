@@ -44,33 +44,6 @@ export default function NMITracker() {
       description="Track and manage Note of Medical Intervention (NMI) claims and responses from insurance providers."
     >
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <a href="/" className="flex items-center gap-3 hover:opacity-80 transition">
-                <span className="material-icon text-primary-600" style={{ fontSize: '32px' }}>local_hospital</span>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">Zero Risk Agent</h1>
-                  <p className="text-xs text-gray-500">Collection Tracker</p>
-                </div>
-              </a>
-            </div>
-            <nav className="flex items-center gap-4">
-              <a href="/recovery" className="btn-secondary text-sm">
-                <span className="material-icon" style={{ fontSize: '18px' }}>receipt_long</span>
-                Recovery
-              </a>
-              <a href="/nmi" className="btn-primary text-sm">
-                <span className="material-icon" style={{ fontSize: '18px' }}>business</span>
-                Collection
-              </a>
-            </nav>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Summary Cards */}

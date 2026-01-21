@@ -23,7 +23,7 @@ export default function UserManagement() {
   const [newUser, setNewUser] = useState({
     email: '',
     full_name: '',
-    role: 'billing_staff',
+    role: 'staff',
     password: ''
   })
 
@@ -83,7 +83,7 @@ export default function UserManagement() {
       setNewUser({
         email: '',
         full_name: '',
-        role: 'billing_staff',
+        role: 'staff',
         password: ''
       })
       setShowAddUser(false)
@@ -220,8 +220,7 @@ export default function UserManagement() {
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
-                    <option value="billing_staff">Billing Staff</option>
-                    <option value="doctor">Doctor</option>
+                    <option value="staff">Staff</option>
                     {isAdmin && <option value="hospital_admin">Hospital Admin</option>}
                     {isSuperAdmin && <option value="super_admin">Super Admin</option>}
                   </select>
@@ -329,7 +328,7 @@ export default function UserManagement() {
         </div>
 
         <footer className="text-center text-xs text-gray-400 mt-8">
-          <p>v1.2 - 2026-01-20 - zeroriskagent.com</p>
+          <p>v1.3 - 2026-01-21 - zeroriskagent.com</p>
         </footer>
       </div>
     </div>

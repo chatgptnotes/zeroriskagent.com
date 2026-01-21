@@ -183,7 +183,6 @@ export default function AdminRegister() {
               >
                 <option value="hospital_admin">Hospital Admin</option>
                 <option value="super_admin">Super Admin</option>
-                <option value="agent_admin">Agent Admin</option>
               </select>
             </div>
 
@@ -282,7 +281,7 @@ export default function AdminRegister() {
         </form>
 
         <footer className="text-center text-xs text-gray-400 mt-8">
-          <p>v1.1 - 2026-01-20 - zeroriskagent.com</p>
+          <p>v1.3 - 2026-01-21 - zeroriskagent.com</p>
         </footer>
       </div>
     </div>

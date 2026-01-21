@@ -9,7 +9,7 @@ export interface UserProfile {
   email: string
   full_name: string
   phone?: string
-  role: 'hospital_admin' | 'billing_staff' | 'doctor' | 'agent_admin' | 'super_admin'
+  role: 'hospital_admin' | 'staff' | 'super_admin'
   hospital_id?: string
   hospital_name?: string
   can_approve_appeals: boolean
@@ -87,9 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize Database Authentication (zero_login_user)
   const initializeDatabaseAuth = () => {
+    // Get user synchronously from localStorage (already loaded in SupabaseAuthService constructor)
     const currentUser = supabaseAuth.getCurrentUser()
-    
+
     if (currentUser) {
+      console.log('Auth initialized with user:', currentUser.email, 'role:', currentUser.role)
       setUser(currentUser)
       const userProfile: UserProfile = {
         id: currentUser.id,
@@ -102,6 +104,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         status: currentUser.status as 'active' | 'suspended' | 'inactive'
       }
       setProfile(userProfile)
+    } else {
+      console.log('Auth initialized: no saved user found')
     }
     setLoading(false)
   }
@@ -254,7 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Helper properties
-  const isAdmin = profile?.role === 'hospital_admin' || profile?.role === 'super_admin' || profile?.role === 'agent_admin'
+  const isAdmin = profile?.role === 'hospital_admin' || profile?.role === 'super_admin'
   const isSuperAdmin = profile?.role === 'super_admin'
   const canViewFinancials = profile?.can_view_financials || false
   const canExportData = profile?.can_export_data || false
