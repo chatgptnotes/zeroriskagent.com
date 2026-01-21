@@ -132,7 +132,6 @@ export default function SuperAdminDashboard() {
       if (tempESICData) {
         const parsedData = JSON.parse(tempESICData)
         setTempData(parsedData)
-        setIsUsingTempData(true)
         setSelectedHospital(parsedData.hospitalName)
         // Clear temp data after use
         localStorage.removeItem('tempESICData')
@@ -204,7 +203,6 @@ export default function SuperAdminDashboard() {
   const fetchDataByDate = async (date: string) => {
     try {
       setLoading(true)
-      setError(null)
 
       const startOfDay = `${date}T00:00:00Z`
       const endOfDay = `${date}T23:59:59Z`
@@ -242,7 +240,6 @@ export default function SuperAdminDashboard() {
   const fetchLatestESICData = async () => {
     try {
       setLoading(true)
-      setError(null)
       
       const { data, error: fetchError } = await supabase
         .from('esic_claims_extractions')

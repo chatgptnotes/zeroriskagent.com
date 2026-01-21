@@ -2,7 +2,6 @@ import { useState, useRef } from 'react'
 import { useUploads, useUploadFile, useDeleteUpload } from '../hooks/useUpload'
 import { formatFileSize } from '../services/upload.service'
 import { extractAllRecordsFromImage, ClaimRecord, extractESICClaimsFromImage, ESICClaimsData, extractNMICasesFromImage, NMICaseRecord } from '../services/gemini.service'
-import { supabase } from '../lib/supabase'
 
 export default function Upload() {
   const [isDragging, setIsDragging] = useState(false)
