@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '../hooks/useAuth'
 
 export default function StaffDashboard() {
-  const { profile } = useAuth()
   const [todayStats, setTodayStats] = useState({
     claimsProcessed: 0,
     pendingTasks: 0,
@@ -40,30 +38,6 @@ export default function StaffDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <span className="material-icon text-primary-600" style={{ fontSize: '32px' }}>work</span>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Staff Dashboard</h1>
-                <p className="text-xs text-gray-500">Claims processing workspace</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
-                <p className="text-xs text-green-600 font-semibold">BILLING STAFF</p>
-              </div>
-              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                <span className="material-icon text-white" style={{ fontSize: '20px' }}>person</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         

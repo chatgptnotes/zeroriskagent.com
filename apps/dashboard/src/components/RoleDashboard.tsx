@@ -43,16 +43,8 @@ export default function RoleDashboard() {
     case 'hospital_admin':
       return <AdminDashboard />
     
-    case 'billing_staff':
+    case 'staff':
       return <StaffDashboard />
-    
-    case 'doctor':
-      // For now, doctors get staff dashboard (can be customized later)
-      return <StaffDashboard />
-    
-    case 'agent_admin':
-      // Agent admins get super admin dashboard for now
-      return <SuperAdminDashboard />
     
     default:
       return (

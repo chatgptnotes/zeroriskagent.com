@@ -185,7 +185,6 @@ export default function Login() {
                   <div><strong>Super Admin:</strong> admin@hopehospital.com / admin123</div>
                   <div><strong>Hospital Admin:</strong> hope@hopehospital.com / hope123</div>
                   <div><strong>Staff:</strong> staff@hopehospital.com / staff123</div>
-                  {isMockMode && <div><strong>Doctor:</strong> doctor@hopehospital.com / doctor123</div>}
                 </div>
               </div>
             </div>
@@ -193,7 +192,7 @@ export default function Login() {
         </form>
 
         <footer className="text-center text-xs text-gray-400 mt-8">
-          <p>v1.1 - 2026-01-20 - zeroriskagent.com</p>
+          <p>v1.3 - 2026-01-21 - zeroriskagent.com</p>
         </footer>
       </div>
     </div>

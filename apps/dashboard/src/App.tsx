@@ -33,7 +33,7 @@ function App() {
           
           {/* Individual dashboard routes for direct access */}
           <Route path="/dashboard/super-admin" element={
-            <ProtectedRoute requiredRole={['super_admin', 'agent_admin']}>
+            <ProtectedRoute requiredRole={['super_admin']}>
               <Navigation />
               <SuperAdminDashboard />
             </ProtectedRoute>
@@ -47,7 +47,7 @@ function App() {
           } />
           
           <Route path="/dashboard/staff" element={
-            <ProtectedRoute requiredRole={['billing_staff', 'doctor']}>
+            <ProtectedRoute requiredRole={['staff']}>
               <Navigation />
               <StaffDashboard />
             </ProtectedRoute>
@@ -68,7 +68,7 @@ function App() {
           } />
           
           <Route path="/users" element={
-            <ProtectedRoute requiredRole={['hospital_admin', 'super_admin', 'agent_admin']}>
+            <ProtectedRoute requiredRole={['hospital_admin', 'super_admin']}>
               <Navigation />
               <UserManagement />
             </ProtectedRoute>

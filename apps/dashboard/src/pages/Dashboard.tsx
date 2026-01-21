@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useAuth } from '../hooks/useAuth'
 import { getBillsList, getRecoverySummary, type BillWithPatient, type RecoverySummary } from '../services/recovery.service'
 
 export default function Dashboard() {
-  const { profile } = useAuth()
   const [bills, setBills] = useState<BillWithPatient[]>([])
   const [summary, setSummary] = useState<RecoverySummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,32 +82,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <a href="/" className="flex items-center gap-3 hover:opacity-80 transition">
-                <span className="material-icon text-primary-600" style={{ fontSize: '32px' }}>local_hospital</span>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">Zero Risk Agent</h1>
-                  <p className="text-xs text-gray-500">Healthcare Revenue Recovery</p>
-                </div>
-              </a>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.full_name || 'Hope Hospital User'}</p>
-                <p className="text-xs text-gray-500">{profile?.role || 'hospital admin'}</p>
-              </div>
-              <button className="btn-secondary">
-                <span className="material-icon" style={{ fontSize: '20px' }}>account_circle</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Summary Cards */}

@@ -17,7 +17,7 @@ export interface ZeroLoginUser {
   email: string
   full_name: string
   password: string // Note: This is stored as plain text in the simple table
-  role: 'super_admin' | 'hospital_admin' | 'billing_staff'
+  role: 'super_admin' | 'hospital_admin' | 'staff'
   status: string
   created_at: string
 }
@@ -41,26 +41,31 @@ export class SupabaseAuthService {
     return supabase !== null
   }
 
-  // Load user from localStorage
+  // Load user from localStorage synchronously, verify in background
   private loadSavedUser() {
     try {
       const userData = localStorage.getItem('zerorisk_supabase_user')
       if (userData) {
         const user = JSON.parse(userData)
-        // Verify user is still valid by checking database
+        // Set user immediately (synchronous) to prevent race condition
+        this.currentUser = user
+
+        // Verify user is still valid in background (non-blocking)
+        // Only sign out if verification explicitly fails
         this.verifyUser(user.id).then((isValid) => {
-          if (isValid) {
-            this.currentUser = user
-          } else {
+          if (!isValid) {
+            console.log('User verification failed, signing out')
             this.signOut()
           }
-        }).catch(() => {
-          this.signOut()
+        }).catch((error) => {
+          console.error('User verification error:', error)
+          // Only sign out on explicit verification failure, not network errors
         })
       }
     } catch (error) {
       console.error('Error loading saved user:', error)
-      this.signOut()
+      this.currentUser = null
+      this.clearUser()
     }
   }
 

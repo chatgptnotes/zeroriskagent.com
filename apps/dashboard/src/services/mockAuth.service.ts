@@ -13,7 +13,7 @@ export interface MockUserProfile {
   email: string
   full_name: string
   phone?: string
-  role: 'hospital_admin' | 'billing_staff' | 'doctor' | 'agent_admin' | 'super_admin'
+  role: 'hospital_admin' | 'staff' | 'super_admin'
   hospital_id?: string
   hospital_name?: string
   can_approve_appeals: boolean
@@ -79,26 +79,7 @@ const MOCK_USERS: Record<string, { password: string; profile: MockUserProfile }>
       email: 'staff@hopehospital.com',
       full_name: 'Billing Staff Member',
       phone: '+91-9876543212',
-      role: 'billing_staff',
-      hospital_id: 'hope-hospital-id',
-      hospital_name: 'Hope Hospital',
-      can_approve_appeals: false,
-      can_view_financials: false,
-      can_export_data: false,
-      status: 'active',
-      last_login_at: new Date().toISOString(),
-      created_at: '2026-01-11T00:00:00Z',
-      updated_at: new Date().toISOString()
-    }
-  },
-  'doctor@hopehospital.com': {
-    password: 'doctor123',
-    profile: {
-      id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
-      email: 'doctor@hopehospital.com',
-      full_name: 'Dr. Medical Professional',
-      phone: '+91-9876543213',
-      role: 'doctor',
+      role: 'staff',
       hospital_id: 'hope-hospital-id',
       hospital_name: 'Hope Hospital',
       can_approve_appeals: false,
