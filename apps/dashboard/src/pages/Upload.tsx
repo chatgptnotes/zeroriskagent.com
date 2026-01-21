@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useUploads, useUploadFile, useDeleteUpload } from '../hooks/useUpload'
 import { formatFileSize } from '../services/upload.service'
-import { extractAllRecordsFromImage, ClaimRecord, extractESICClaimsFromImage, ESICClaimsData } from '../services/gemini.service'
+import { extractAllRecordsFromImage, ClaimRecord, extractESICClaimsFromImage, ESICClaimsData, extractNMICasesFromImage, NMICaseRecord } from '../services/gemini.service'
 import { supabase } from '../lib/supabase'
 
 export default function Upload() {
@@ -14,6 +14,9 @@ export default function Upload() {
   const [extractionError, setExtractionError] = useState<string | null>(null)
   const [esicData, setEsicData] = useState<ESICClaimsData | null>(null)
   const [isESICDashboard, setIsESICDashboard] = useState(false)
+  const [nmiRecords, setNmiRecords] = useState<NMICaseRecord[]>([])
+  const [isNMIDashboard, setIsNMIDashboard] = useState(false)
+  const [nmiHospitalName, setNmiHospitalName] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: uploadsData, isLoading: uploadsLoading } = useUploads()
@@ -71,6 +74,9 @@ export default function Upload() {
     setExtractionError(null)
     setEsicData(null)
     setIsESICDashboard(false)
+    setNmiRecords([])
+    setIsNMIDashboard(false)
+    setNmiHospitalName('')
 
     // Create image preview
     const reader = new FileReader()
@@ -79,29 +85,43 @@ export default function Upload() {
     }
     reader.readAsDataURL(file)
 
-    // Try to detect if this is an ESIC dashboard first
+    // Try to detect the type of ESIC dashboard and extract data
     setIsExtracting(true)
     try {
-      // First attempt ESIC extraction
-      const esicResult = await extractESICClaimsFromImage(file)
-      
-      if (esicResult.success && esicResult.data && esicResult.data.stageData.length > 0) {
-        // This looks like an ESIC dashboard
-        setIsESICDashboard(true)
-        setEsicData(esicResult.data)
-        setExtractionConfidence(esicResult.confidence)
-        
-        // Save to database
-        await saveESICDataToDatabase(esicResult.data)
+      // First attempt NMI (Need More Info) extraction - most specific
+      const nmiResult = await extractNMICasesFromImage(file)
+
+      if (nmiResult.success && nmiResult.records.length > 0) {
+        // This is an NMI Cases table
+        setIsNMIDashboard(true)
+        setNmiRecords(nmiResult.records)
+        setNmiHospitalName(nmiResult.hospitalName)
+        setExtractionConfidence(nmiResult.confidence)
+
+        // Save NMI data to database
+        await saveNMIDataToDatabase(nmiResult.records, nmiResult.hospitalName)
       } else {
-        // Fall back to general record extraction
-        setIsESICDashboard(false)
-        const result = await extractAllRecordsFromImage(file)
-        if (result.success && result.records.length > 0) {
-          setExtractedRecords(result.records)
-          setExtractionConfidence(result.confidence)
+        // Try ESIC stage dashboard extraction
+        const esicResult = await extractESICClaimsFromImage(file)
+
+        if (esicResult.success && esicResult.data && esicResult.data.stageData.length > 0) {
+          // This looks like an ESIC stage dashboard
+          setIsESICDashboard(true)
+          setEsicData(esicResult.data)
+          setExtractionConfidence(esicResult.confidence)
+
+          // Save to database
+          await saveESICDataToDatabase(esicResult.data)
         } else {
-          setExtractionError(result.error || 'No records found in image')
+          // Fall back to general record extraction
+          setIsESICDashboard(false)
+          const result = await extractAllRecordsFromImage(file)
+          if (result.success && result.records.length > 0) {
+            setExtractedRecords(result.records)
+            setExtractionConfidence(result.confidence)
+          } else {
+            setExtractionError(result.error || 'No records found in image')
+          }
         }
       }
     } catch (error) {
@@ -113,6 +133,36 @@ export default function Upload() {
 
   const handleBrowseClick = () => {
     fileInputRef.current?.click()
+  }
+
+  // Save NMI data to database
+  const saveNMIDataToDatabase = async (records: NMICaseRecord[], hospitalName: string) => {
+    try {
+      const { error } = await supabase
+        .from('nmi_cases')
+        .insert(
+          records.map(record => ({
+            sr: record.sr,
+            claim_id: record.id,
+            admit_no: record.admitNo,
+            card_id: record.cardId,
+            patient_name: record.patientName,
+            claim_amount: typeof record.claimAmt === 'string' ? parseFloat(record.claimAmt.replace(/,/g, '')) : record.claimAmt,
+            approved_amount: typeof record.approvedAmt === 'string' ? parseFloat(record.approvedAmt.replace(/,/g, '')) : record.approvedAmt,
+            reverted_back_on: record.revertedBackOn,
+            hospital_name: hospitalName,
+            created_at: new Date().toISOString()
+          }))
+        )
+
+      if (error) {
+        console.error('Error saving NMI data:', error)
+      } else {
+        console.log('NMI data saved successfully')
+      }
+    } catch (error) {
+      console.error('Error saving NMI data:', error)
+    }
   }
 
   // Save ESIC data to database
@@ -146,6 +196,9 @@ export default function Upload() {
     setExtractionError(null)
     setEsicData(null)
     setIsESICDashboard(false)
+    setNmiRecords([])
+    setIsNMIDashboard(false)
+    setNmiHospitalName('')
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -164,6 +217,9 @@ export default function Upload() {
       setExtractionError(null)
       setEsicData(null)
       setIsESICDashboard(false)
+      setNmiRecords([])
+      setIsNMIDashboard(false)
+      setNmiHospitalName('')
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -245,9 +301,9 @@ export default function Upload() {
         </div>
 
         {/* Main Content - Two Column Layout when data extracted */}
-        <div className={`grid gap-6 ${(extractedRecords.length > 0 || esicData) ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 max-w-4xl'}`}>
+        <div className={`grid gap-6 ${(extractedRecords.length > 0 || esicData || nmiRecords.length > 0) ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 max-w-4xl'}`}>
           {/* Left Column - Upload Area */}
-          <div className={(extractedRecords.length > 0 || esicData) ? 'lg:col-span-1' : ''}>
+          <div className={(extractedRecords.length > 0 || esicData || nmiRecords.length > 0) ? 'lg:col-span-1' : ''}>
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <span className="material-icon text-primary-600">cloud_upload</span>
@@ -380,6 +436,28 @@ export default function Upload() {
                 </div>
               )}
 
+              {/* NMI Extraction Success Summary */}
+              {nmiRecords.length > 0 && isNMIDashboard && !isExtracting && (
+                <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-icon text-green-600" style={{ fontSize: '20px' }}>info</span>
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          NMI Cases extracted
+                        </p>
+                        <p className="text-xs text-green-700">
+                          {nmiHospitalName} - {nmiRecords.length} records
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
+                      {extractionConfidence}% confidence
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* ESIC Extraction Success Summary */}
               {esicData && isESICDashboard && !isExtracting && (
                 <div className="mt-4 p-3 bg-green-50 rounded-lg">
@@ -391,7 +469,7 @@ export default function Upload() {
                           ESIC Dashboard extracted
                         </p>
                         <p className="text-xs text-green-700">
-                          {esicData.hospitalName} • {esicData.totalClaims.counts} total claims
+                          {esicData.hospitalName} - {esicData.totalClaims.counts} total claims
                         </p>
                       </div>
                     </div>
@@ -443,7 +521,85 @@ export default function Upload() {
             </div>
           </div>
 
-          {/* Right Column - ESIC Dashboard Data */}
+          {/* Right Column - NMI Cases Table (exact ESIC format) */}
+          {nmiRecords.length > 0 && isNMIDashboard && (
+            <div className="lg:col-span-2">
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <span className="material-icon text-orange-600">info</span>
+                    Need More Info Cases
+                  </h2>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-500">
+                      {nmiHospitalName}
+                    </span>
+                    <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                      {nmiRecords.length} records
+                    </span>
+                  </div>
+                </div>
+
+                {/* NMI Table - Matching ESIC Dashboard columns exactly */}
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <div className="max-h-[500px] overflow-y-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-teal-700 sticky top-0">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Sr.</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">ID</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Admit No.</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Card ID</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Patient Name</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-white uppercase tracking-wider">Claim Amt</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium text-white uppercase tracking-wider">Approved Amt</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-white uppercase tracking-wider">Reverted Back On</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-teal-800 divide-y divide-teal-700">
+                        {nmiRecords.map((record, index) => (
+                          <tr key={index} className="hover:bg-teal-700 transition-colors">
+                            <td className="px-3 py-2 text-sm text-teal-100 whitespace-nowrap">{record.sr}</td>
+                            <td className="px-3 py-2 text-sm text-yellow-400 font-medium whitespace-nowrap">
+                              <a href="#" className="hover:underline">{record.id}</a>
+                            </td>
+                            <td className="px-3 py-2 text-sm text-teal-100 whitespace-nowrap">{record.admitNo}</td>
+                            <td className="px-3 py-2 text-sm text-teal-100 whitespace-nowrap">{record.cardId}</td>
+                            <td className="px-3 py-2 text-sm text-teal-100 whitespace-nowrap">{record.patientName}</td>
+                            <td className="px-3 py-2 text-sm text-teal-100 whitespace-nowrap text-right font-medium">
+                              {typeof record.claimAmt === 'number'
+                                ? record.claimAmt.toLocaleString('en-IN')
+                                : record.claimAmt}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-teal-100 whitespace-nowrap text-right">
+                              {typeof record.approvedAmt === 'number'
+                                ? record.approvedAmt.toLocaleString('en-IN')
+                                : record.approvedAmt}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-teal-100 whitespace-nowrap">{record.revertedBackOn}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Table Footer */}
+                <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <span className="material-icon" style={{ fontSize: '14px' }}>check_circle</span>
+                    Data saved to database
+                  </span>
+                  <button className="flex items-center gap-1 text-primary-600 hover:text-primary-700">
+                    <span className="material-icon" style={{ fontSize: '14px' }}>download</span>
+                    Export CSV
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Right Column - ESIC Dashboard Data - Full Table */}
           {esicData && isESICDashboard && (
             <div className="lg:col-span-2">
               <div className="card">
@@ -456,8 +612,8 @@ export default function Upload() {
                     <span className="text-sm text-gray-500">
                       {esicData.hospitalName}
                     </span>
-                    <a 
-                      href="/dashboard/super-admin" 
+                    <a
+                      href="/dashboard/super-admin"
                       className="text-xs bg-primary-600 text-white px-3 py-1.5 rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-1"
                     >
                       <span className="material-icon" style={{ fontSize: '14px' }}>dashboard</span>
@@ -466,51 +622,88 @@ export default function Upload() {
                   </div>
                 </div>
 
-                {/* Summary Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <p className="text-xs text-blue-600 font-medium">In Patient</p>
-                    <p className="text-lg font-bold text-blue-800">{esicData.totalClaims.inPatient}</p>
-                  </div>
-                  <div className="bg-green-50 p-3 rounded-lg">
-                    <p className="text-xs text-green-600 font-medium">OPD</p>
-                    <p className="text-lg font-bold text-green-800">{esicData.totalClaims.opd}</p>
-                  </div>
-                  <div className="bg-purple-50 p-3 rounded-lg">
-                    <p className="text-xs text-purple-600 font-medium">Total Counts</p>
-                    <p className="text-lg font-bold text-purple-800">{esicData.totalClaims.counts}</p>
-                  </div>
-                  <div className="bg-orange-50 p-3 rounded-lg">
-                    <p className="text-xs text-orange-600 font-medium">Enhancement</p>
-                    <p className="text-lg font-bold text-orange-800">{esicData.totalClaims.enhancement}</p>
-                  </div>
-                </div>
-
-                {/* Stage Preview */}
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-gray-700">Stages Overview</h3>
-                  <div className="max-h-60 overflow-y-auto space-y-2">
-                    {esicData.stageData.map((stage, index) => (
-                      <div key={index} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-800">{stage.stage}</span>
-                          <span className="text-xs text-gray-500">{stage.statuses.length} statuses</span>
-                        </div>
-                        {/* Show first status as preview */}
-                        {stage.statuses.length > 0 && (
-                          <div className="mt-1 text-xs text-gray-600">
-                            {stage.statuses[0].status}: {stage.statuses[0].counts} claims
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                {/* Full ESIC Table - Matching exact ESIC dashboard format */}
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <div className="max-h-[600px] overflow-y-auto">
+                    <table className="min-w-full">
+                      <thead className="bg-teal-700 sticky top-0 z-10">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider border-r border-teal-600 min-w-[180px]">Stage</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider border-r border-teal-600 min-w-[280px]">Status</th>
+                          <th className="px-4 py-3 text-right text-xs font-bold text-white uppercase tracking-wider border-r border-teal-600 min-w-[100px]">In Patient</th>
+                          <th className="px-4 py-3 text-right text-xs font-bold text-white uppercase tracking-wider border-r border-teal-600 min-w-[100px]">OPD Patient</th>
+                          <th className="px-4 py-3 text-right text-xs font-bold text-white uppercase tracking-wider border-r border-teal-600 min-w-[80px]">Counts</th>
+                          <th className="px-4 py-3 text-right text-xs font-bold text-white uppercase tracking-wider min-w-[100px]">Enhancement</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {esicData.stageData.map((stage, stageIndex) => (
+                          stage.statuses.map((status, statusIndex) => (
+                            <tr
+                              key={`${stageIndex}-${statusIndex}`}
+                              className={`${statusIndex % 2 === 0 ? 'bg-teal-50' : 'bg-teal-100'} hover:bg-teal-200 transition-colors border-b border-teal-200`}
+                            >
+                              {/* Show stage name only for first status of each stage */}
+                              <td className={`px-4 py-2 text-sm font-semibold text-teal-900 border-r border-teal-200 ${statusIndex === 0 ? 'bg-teal-200' : 'bg-transparent'}`}>
+                                {statusIndex === 0 ? stage.stage : ''}
+                              </td>
+                              <td className={`px-4 py-2 text-sm border-r border-teal-200 ${status.isHighlighted ? 'text-red-700 font-medium' : 'text-teal-800'}`}>
+                                {status.status}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-teal-800 text-right border-r border-teal-200 font-medium">
+                                {status.inPatient}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-teal-800 text-right border-r border-teal-200 font-medium">
+                                {status.opd}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-teal-800 text-right border-r border-teal-200 font-medium">
+                                {status.counts}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-teal-800 text-right font-medium">
+                                {status.enhancement}
+                              </td>
+                            </tr>
+                          ))
+                        ))}
+                        {/* Total Row */}
+                        <tr className="bg-teal-700 font-bold">
+                          <td className="px-4 py-3 text-sm text-white border-r border-teal-600" colSpan={2}>
+                            Total Claims
+                          </td>
+                          <td className="px-4 py-3 text-sm text-white text-right border-r border-teal-600">
+                            {esicData.totalClaims.inPatient}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-white text-right border-r border-teal-600">
+                            {esicData.totalClaims.opd}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-white text-right border-r border-teal-600">
+                            {esicData.totalClaims.counts}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-white text-right">
+                            {esicData.totalClaims.enhancement}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
                 {/* Action Footer */}
                 <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                  <span>Data extracted from ESIC dashboard</span>
-                  <span className="text-green-600">✓ Saved to database</span>
+                  <span className="flex items-center gap-1">
+                    <span className="material-icon" style={{ fontSize: '14px' }}>check_circle</span>
+                    Data extracted from ESIC dashboard
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-green-600 flex items-center gap-1">
+                      <span className="material-icon" style={{ fontSize: '14px' }}>check</span>
+                      Saved to database
+                    </span>
+                    <button className="flex items-center gap-1 text-primary-600 hover:text-primary-700">
+                      <span className="material-icon" style={{ fontSize: '14px' }}>download</span>
+                      Export CSV
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
