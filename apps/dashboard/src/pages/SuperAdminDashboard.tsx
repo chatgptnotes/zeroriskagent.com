@@ -1,340 +1,318 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { getRecoverySummary, type RecoverySummary } from '../services/recovery.service'
+import { ESICClaimsData } from '../services/gemini.service'
+
+// Data structure matching the ESIC interface
+interface ClaimStatusData {
+  stage: string
+  statuses: {
+    status: string
+    inPatient: number
+    opd: number
+    counts: number
+    enhancement: number
+    isHighlighted?: boolean
+  }[]
+}
+
+const dummyClaimsData: ClaimStatusData[] = [
+  {
+    stage: 'ESIC Referral',
+    statuses: [
+      { status: 'Patient Referral', inPatient: 28, opd: 65, counts: 93, enhancement: 0 },
+      { status: 'Need More Information [Ref]', inPatient: 0, opd: 0, counts: 0, enhancement: 0, isHighlighted: true }
+    ]
+  },
+  {
+    stage: 'Hospital Intimation',
+    statuses: [
+      { status: 'EIR To Model Hospital', inPatient: 11, opd: 0, counts: 11, enhancement: 0 },
+      { status: 'Intimation Acknowledged', inPatient: 5, opd: 0, counts: 5, enhancement: 0 }
+    ]
+  },
+  {
+    stage: 'BPA Acknowledgement',
+    statuses: [
+      { status: 'Need More Information [Int]', inPatient: 0, opd: 0, counts: 0, enhancement: 0, isHighlighted: true }
+    ]
+  },
+  {
+    stage: 'Hospital Submission',
+    statuses: [
+      { status: 'Claim Submitted Electronically - More Info', inPatient: 36, opd: 0, counts: 36, enhancement: 0, isHighlighted: true }
+    ]
+  },
+  {
+    stage: 'ESIC - Document Receiver',
+    statuses: [
+      { status: 'Document Received', inPatient: 0, opd: 0, counts: 0, enhancement: 0, isHighlighted: true }
+    ]
+  },
+  {
+    stage: 'ESIC - Document Verifier',
+    statuses: [
+      { status: 'Recommended for Rejection', inPatient: 0, opd: 0, counts: 0, enhancement: 0, isHighlighted: true }
+    ]
+  },
+  {
+    stage: 'BPA Scrutinizer',
+    statuses: [
+      { status: 'Scrutinizer Verified', inPatient: 9, opd: 1, counts: 10, enhancement: 0 },
+      { status: 'Need More Info [Scr]', inPatient: 3, opd: 0, counts: 3, enhancement: 0, isHighlighted: true },
+      { status: 'Recommended for Rejection', inPatient: 5, opd: 0, counts: 5, enhancement: 0, isHighlighted: true }
+    ]
+  },
+  {
+    stage: 'ESIC - Medical Officer L1',
+    statuses: [
+      { status: 'Claim Authorized', inPatient: 20, opd: 0, counts: 20, enhancement: 0 },
+      { status: 'Need More Information [Val]', inPatient: 0, opd: 0, counts: 0, enhancement: 0, isHighlighted: true },
+      { status: 'Recommended for Rejection', inPatient: 1, opd: 0, counts: 1, enhancement: 0, isHighlighted: true },
+      { status: 'Recommended for Approval', inPatient: 10, opd: 0, counts: 10, enhancement: 0 }
+    ]
+  },
+  {
+    stage: 'ESIC - Medical Officer L2',
+    statuses: [
+      { status: 'Review By Validator', inPatient: 1, opd: 0, counts: 1, enhancement: 0 },
+      { status: 'Need More Information [App]', inPatient: 24, opd: 0, counts: 24, enhancement: 0, isHighlighted: true },
+      { status: 'Recommended for Rejection', inPatient: 1, opd: 0, counts: 1, enhancement: 0, isHighlighted: true }
+    ]
+  },
+  {
+    stage: 'ESIC - CFA Sanction',
+    statuses: [
+      { status: 'Rejected', inPatient: 0, opd: 0, counts: 0, enhancement: 0, isHighlighted: true }
+    ]
+  },
+  {
+    stage: 'ESIC - Accounts',
+    statuses: [
+      { status: 'Proceed for Payment (by ESIC)', inPatient: 5, opd: 0, counts: 5, enhancement: 0 },
+      { status: 'Rejected Claims', inPatient: 0, opd: 0, counts: 0, enhancement: 0, isHighlighted: true }
+    ]
+  },
+  {
+    stage: 'BPA Maintenance',
+    statuses: [
+      { status: 'Inactive Intimations', inPatient: 0, opd: 0, counts: 0, enhancement: 0 },
+      { status: 'Inactive Submission', inPatient: 0, opd: 0, counts: 0, enhancement: 0 }
+    ]
+  }
+]
 
 export default function SuperAdminDashboard() {
   useAuth() // Auth check only, profile displayed in Navigation component
-  const [metrics, setMetrics] = useState<RecoverySummary | null>(null)
+  const [selectedHospital, setSelectedHospital] = useState('ESI Hospital/ RO/ DCBO')
+  const [searchId, setSearchId] = useState('')
+  const [esicData, setEsicData] = useState<ESICClaimsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [systemStats, setSystemStats] = useState({
-    totalUsers: 0,
-    activeHospitals: 0,
-    totalRevenue: 0,
-    systemHealth: 'Good'
-  })
 
+  // Fetch latest ESIC data from database
   useEffect(() => {
-    fetchDashboardMetrics()
-    fetchSystemStats()
+    fetchLatestESICData()
   }, [])
 
-  async function fetchDashboardMetrics() {
+  const fetchLatestESICData = async () => {
     try {
       setLoading(true)
       setError(null)
-      const summary = await getRecoverySummary()
-      setMetrics(summary)
+      
+      const { data, error: fetchError } = await supabase
+        .from('esic_claims_extractions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError
+      }
+
+      if (data) {
+        setEsicData({
+          hospitalName: data.hospital_name,
+          extractedAt: data.extracted_at,
+          totalClaims: data.total_claims,
+          stageData: data.stage_data
+        })
+        setSelectedHospital(data.hospital_name)
+      } else {
+        // No data found, use dummy data
+        setEsicData(null)
+      }
     } catch (err) {
-      console.error('Error fetching metrics:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard metrics')
+      console.error('Error fetching ESIC data:', err)
+      setError('Failed to load dashboard data')
     } finally {
       setLoading(false)
     }
   }
 
-  async function fetchSystemStats() {
-    try {
-      // Get real user count from zero_login_user
-      const { count } = await supabase
-        .from('zero_login_user')
-        .select('*', { count: 'exact', head: true })
-
-      setSystemStats({
-        totalUsers: count || 0,
-        activeHospitals: 1, // Hope Hospital
-        totalRevenue: 0, // Will be computed from recovery
-        systemHealth: 'Good'
+  // Use extracted data if available, otherwise fall back to dummy data
+  const claimsData = esicData ? esicData.stageData : dummyClaimsData
+  const totalClaims = esicData ? esicData.totalClaims : 
+    dummyClaimsData.reduce((acc, stage) => {
+      stage.statuses.forEach(status => {
+        acc.inPatient += status.inPatient
+        acc.opd += status.opd
+        acc.counts += status.counts
+        acc.enhancement += status.enhancement
       })
-    } catch (err) {
-      console.error('Error fetching system stats:', err)
-    }
-  }
+      return acc
+    }, { inPatient: 0, opd: 0, counts: 0, enhancement: 0 })
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <span className="material-icon text-primary-600 animate-pulse" style={{ fontSize: '48px' }}>autorenew</span>
-          <p className="text-gray-600">Loading Super Admin dashboard...</p>
+          <p className="text-gray-600">Loading ESIC dashboard...</p>
         </div>
       </div>
     )
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="card max-w-md">
-          <div className="flex items-center gap-3 mb-4">
-            <span className="material-icon text-red-600">error</span>
-            <h2 className="text-xl font-semibold text-red-600">Error Loading Dashboard</h2>
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Header Controls */}
+      <div className="bg-white border-b border-gray-300 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-700">{selectedHospital}</span>
+            <select 
+              className="bg-yellow-200 border border-gray-400 rounded px-3 py-1 text-sm font-medium"
+              value={selectedHospital}
+              onChange={(e) => setSelectedHospital(e.target.value)}
+            >
+              <option value="ESI Hospital/ RO/ DCBO">Select Hospital</option>
+              <option value="Hope Hospital Mumbai">Hope Hospital Mumbai</option>
+              <option value="City Care Hospital Delhi">City Care Hospital Delhi</option>
+              <option value="Metro Clinic Bangalore">Metro Clinic Bangalore</option>
+            </select>
           </div>
-          <p className="text-gray-700 mb-4">{error}</p>
-          <button onClick={fetchDashboardMetrics} className="btn-primary w-full">
-            <span className="material-icon" style={{ fontSize: '20px' }}>refresh</span>
-            Retry
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-700">Hospital</span>
+            <div className="flex items-center gap-3">
+              {esicData && (
+                <div className="flex items-center gap-2 bg-green-100 px-3 py-1 rounded-full">
+                  <span className="material-icon text-green-600" style={{ fontSize: '16px' }}>check_circle</span>
+                  <span className="text-xs text-green-700 font-medium">Live Data</span>
+                </div>
+              )}
+              {!esicData && (
+                <div className="flex items-center gap-2 bg-yellow-100 px-3 py-1 rounded-full">
+                  <span className="material-icon text-yellow-600" style={{ fontSize: '16px' }}>info</span>
+                  <span className="text-xs text-yellow-700 font-medium">Demo Data</span>
+                </div>
+              )}
+              <button 
+                onClick={fetchLatestESICData}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded text-sm font-medium flex items-center gap-2"
+              >
+                <span className="material-icon" style={{ fontSize: '16px' }}>refresh</span>
+                REFRESH
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Table */}
+      <div className="p-6">
+        <div className="overflow-x-auto border border-gray-400">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-teal-100 border-b border-gray-400">
+                <th className="border-r border-gray-400 px-4 py-3 text-left font-semibold text-gray-800 w-40">Stage</th>
+                <th className="border-r border-gray-400 px-4 py-3 text-left font-semibold text-gray-800 min-w-80">Status</th>
+                <th className="border-r border-gray-400 px-4 py-3 text-center font-semibold text-gray-800 w-20">In Patient</th>
+                <th className="border-r border-gray-400 px-4 py-3 text-center font-semibold text-gray-800 w-20">OPD Patient</th>
+                <th className="border-r border-gray-400 px-4 py-3 text-center font-semibold text-gray-800 w-20">Counts</th>
+                <th className="px-4 py-3 text-center font-semibold text-gray-800 w-24">Enhancement</th>
+              </tr>
+            </thead>
+            <tbody>
+              {claimsData.map((stageData, stageIndex) => (
+                stageData.statuses.map((status, statusIndex) => (
+                  <tr key={`${stageIndex}-${statusIndex}`} className="border-b border-gray-300 hover:bg-gray-50">
+                    {statusIndex === 0 && (
+                      <td 
+                        rowSpan={stageData.statuses.length}
+                        className="border-r border-gray-400 px-4 py-3 bg-teal-50 font-medium text-gray-800 align-top"
+                      >
+                        {stageData.stage}
+                      </td>
+                    )}
+                    <td className={`border-r border-gray-400 px-4 py-3 ${
+                      status.isHighlighted ? 'text-red-700 font-medium' : 'text-gray-700'
+                    }`}>
+                      {status.status}
+                    </td>
+                    <td className="border-r border-gray-400 px-4 py-3 text-center text-gray-700">
+                      {status.inPatient === 0 ? '' : status.inPatient}
+                    </td>
+                    <td className="border-r border-gray-400 px-4 py-3 text-center text-gray-700">
+                      {status.opd === 0 ? '' : status.opd}
+                    </td>
+                    <td className="border-r border-gray-400 px-4 py-3 text-center text-gray-700">
+                      {status.counts === 0 ? '' : status.counts}
+                    </td>
+                    <td className="px-4 py-3 text-center text-gray-700">
+                      {status.enhancement === 0 ? '' : status.enhancement}
+                    </td>
+                  </tr>
+                ))
+              ))}
+              
+              {/* Total Row */}
+              <tr className="bg-yellow-100 border-t-2 border-gray-400 font-semibold">
+                <td className="border-r border-gray-400 px-4 py-3 text-gray-800"></td>
+                <td className="border-r border-gray-400 px-4 py-3 text-gray-800 font-bold">Total Claims</td>
+                <td className="border-r border-gray-400 px-4 py-3 text-center text-gray-800">{totalClaims.inPatient}</td>
+                <td className="border-r border-gray-400 px-4 py-3 text-center text-gray-800">{totalClaims.opd}</td>
+                <td className="border-r border-gray-400 px-4 py-3 text-center text-gray-800">{totalClaims.counts}</td>
+                <td className="px-4 py-3 text-center text-gray-800">{totalClaims.enhancement}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Bottom Controls */}
+        <div className="flex items-center gap-4 mt-6">
+          <span className="text-sm text-gray-700">Get Claim Status for ID</span>
+          <input
+            type="text"
+            value={searchId}
+            onChange={(e) => setSearchId(e.target.value)}
+            className="border border-gray-400 px-3 py-1 text-sm w-48"
+            placeholder="Enter claim ID..."
+          />
+          <button className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-1.5 text-sm font-medium">
+            CLAIM STATUS
           </button>
         </div>
       </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* System Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <SystemCard
-            icon="people"
-            iconColor="blue"
-            value={systemStats.totalUsers}
-            label="Total Users"
-            subtext="Across all hospitals"
-          />
-          <SystemCard
-            icon="local_hospital"
-            iconColor="green"
-            value={systemStats.activeHospitals}
-            label="Active Hospitals"
-            subtext="Currently using system"
-          />
-          <SystemCard
-            icon="payments"
-            iconColor="purple"
-            value={`₹${(systemStats.totalRevenue / 100000).toFixed(1)}L`}
-            label="Total Revenue"
-            subtext="Platform revenue"
-          />
-          <SystemCard
-            icon="verified"
-            iconColor="green"
-            value={systemStats.systemHealth}
-            label="System Health"
-            subtext="All services running"
-          />
-        </div>
-
-        {/* Financial Overview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="material-icon text-primary-600">account_balance</span>
-              Financial Performance
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Total Claims Processed</span>
-                <span className="text-lg font-semibold">₹{metrics?.totalAmount?.toLocaleString() || '0'}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <span className="text-sm text-gray-600">Total Recovered</span>
-                <span className="text-lg font-semibold text-green-600">₹{metrics?.receivedAmount?.toLocaleString() || '0'}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                <span className="text-sm text-gray-600">Platform Revenue (25%)</span>
-                <span className="text-lg font-semibold text-purple-600">₹{((metrics?.receivedAmount || 0) * 0.25)?.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="material-icon text-primary-600">trending_up</span>
-              Recovery Statistics
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Overall Recovery Rate</span>
-                <span className="text-lg font-semibold text-green-600">
-                  {metrics && metrics.totalAmount > 0
-                    ? `${((metrics.receivedAmount / metrics.totalAmount) * 100).toFixed(1)}%`
-                    : '0%'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Average Recovery Time</span>
-                <span className="text-lg font-semibold">32 days</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Success Rate</span>
-                <span className="text-lg font-semibold text-green-600">78%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Admin Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="material-icon text-primary-600">admin_panel_settings</span>
-              System Administration
-            </h3>
-            <div className="space-y-3">
-              <a href="/users" className="btn-primary w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '20px' }}>people</span>
-                  User Management
-                </span>
-                <span className="material-icon">arrow_forward</span>
-              </a>
-              <button className="btn-secondary w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '20px' }}>settings</span>
-                  System Settings
-                </span>
-                <span className="material-icon">arrow_forward</span>
-              </button>
-              <button className="btn-secondary w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '20px' }}>analytics</span>
-                  Advanced Analytics
-                </span>
-                <span className="material-icon">arrow_forward</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="material-icon text-primary-600">business</span>
-              Hospital Management
-            </h3>
-            <div className="space-y-3">
-              <a href="/recovery" className="btn-primary w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '20px' }}>receipt_long</span>
-                  Recovery Dashboard
-                </span>
-                <span className="material-icon">arrow_forward</span>
-              </a>
-              <a href="/nmi" className="btn-secondary w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '20px' }}>business</span>
-                  Collection Tracker
-                </span>
-                <span className="material-icon">arrow_forward</span>
-              </a>
-              <button className="btn-secondary w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <span className="material-icon" style={{ fontSize: '20px' }}>local_hospital</span>
-                  Hospital Onboarding
-                </span>
-                <span className="material-icon">arrow_forward</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="material-icon text-primary-600">history</span>
-            Recent System Activity
-          </h3>
-          <div className="space-y-3">
-            <ActivityItem 
-              icon="person_add" 
-              text="New user registered: Dr. Sharma (AIIMS Delhi)" 
-              time="2 hours ago"
-              type="success"
-            />
-            <ActivityItem 
-              icon="payments" 
-              text="₹2.5L recovered for Hope Hospital - CGHS claim #12345" 
-              time="4 hours ago"
-              type="success"
-            />
-            <ActivityItem 
-              icon="security" 
-              text="Security scan completed - No issues found" 
-              time="6 hours ago"
-              type="info"
-            />
-            <ActivityItem 
-              icon="backup" 
-              text="Daily backup completed successfully" 
-              time="8 hours ago"
-              type="info"
-            />
-          </div>
-        </div>
-      </main>
 
       {/* Footer */}
-      <footer className="mt-16 py-6 border-t border-gray-200 bg-white">
+      <footer className="mt-8 py-6 border-t border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-gray-400">
-          <p>v1.6 | Last Updated: 2026-01-21 | zeroriskagent.com | Super Admin Access</p>
+          <p>v1.7 | Last Updated: 2026-01-21 | zeroriskagent.com | ESIC Claims Tracking System</p>
+          {esicData && (
+            <p className="mt-1 text-green-600">
+              Data extracted on {new Date(esicData.extractedAt).toLocaleDateString('en-IN')} • 
+              Upload new ESIC dashboard image to update
+            </p>
+          )}
+          {!esicData && (
+            <p className="mt-1 text-yellow-600">
+              Demo data • Upload ESIC dashboard image at <a href="/upload" className="underline hover:text-yellow-700">/upload</a> for live data
+            </p>
+          )}
         </div>
       </footer>
-    </div>
-  )
-}
-
-function SystemCard({
-  icon,
-  iconColor,
-  value,
-  label,
-  subtext,
-}: {
-  icon: string
-  iconColor: string
-  value: number | string
-  label: string
-  subtext: string
-}) {
-  const colorClasses: Record<string, string> = {
-    blue: 'text-blue-600',
-    green: 'text-green-600',
-    purple: 'text-purple-600',
-    red: 'text-red-600',
-    orange: 'text-orange-600',
-  }
-
-  return (
-    <div className="card">
-      <div className="flex items-center justify-between mb-2">
-        <span className={`material-icon ${colorClasses[iconColor]}`}>{icon}</span>
-        <span className="text-2xl font-bold">{value}</span>
-      </div>
-      <p className="text-sm text-gray-600">{label}</p>
-      <p className="text-xs text-gray-500 mt-1">{subtext}</p>
-    </div>
-  )
-}
-
-function ActivityItem({
-  icon,
-  text,
-  time,
-  type
-}: {
-  icon: string
-  text: string
-  time: string
-  type: 'success' | 'info' | 'warning' | 'error'
-}) {
-  const typeClasses = {
-    success: 'text-green-600 bg-green-50',
-    info: 'text-blue-600 bg-blue-50',
-    warning: 'text-orange-600 bg-orange-50',
-    error: 'text-red-600 bg-red-50'
-  }
-
-  return (
-    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${typeClasses[type]}`}>
-        <span className="material-icon" style={{ fontSize: '18px' }}>{icon}</span>
-      </div>
-      <div className="flex-1">
-        <p className="text-sm text-gray-900">{text}</p>
-        <p className="text-xs text-gray-500">{time}</p>
-      </div>
     </div>
   )
 }

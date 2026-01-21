@@ -260,6 +260,238 @@ Return ONLY valid JSON in this exact format:
   }
 }
 
+// ESIC Claims Dashboard Data Structure
+export interface ESICStageStatus {
+  status: string
+  inPatient: number
+  opd: number
+  counts: number
+  enhancement: number
+  isHighlighted?: boolean
+}
+
+export interface ESICStageData {
+  stage: string
+  statuses: ESICStageStatus[]
+}
+
+export interface ESICClaimsData {
+  hospitalName: string
+  extractedAt: string
+  totalClaims: {
+    inPatient: number
+    opd: number
+    counts: number
+    enhancement: number
+  }
+  stageData: ESICStageData[]
+}
+
+export interface ESICExtractionResult {
+  success: boolean
+  data: ESICClaimsData | null
+  error: string | null
+  confidence: number
+}
+
+// Extract ESIC Claims Dashboard data from image
+export async function extractESICClaimsFromImage(file: File): Promise<ESICExtractionResult> {
+  if (!GEMINI_API_KEY) {
+    return {
+      success: false,
+      data: null,
+      error: 'Gemini API key not configured',
+      confidence: 0
+    }
+  }
+
+  try {
+    const base64Data = await fileToBase64(file)
+    const mimeType = file.type || 'image/jpeg'
+
+    const prompt = `This image contains an ESIC Claims Dashboard with a table showing different stages and statuses. Extract ALL data from this table.
+
+The table has these columns:
+- Stage (left column)
+- Status (second column)
+- In Patient (numbers)
+- OPD Patient (numbers)
+- Counts (numbers)
+- Enhancement (numbers)
+
+Expected stages include:
+- ESIC Referral
+- Hospital Intimation
+- BPA Acknowledgement
+- Hospital Submission
+- ESIC - Document Receiver
+- ESIC - Document Verifier
+- BPA Scrutinizer
+- ESIC - Medical Officer L1
+- ESIC - Medical Officer L2
+- ESIC - CFA Sanction
+- ESIC - Accounts
+- BPA Maintenance
+
+For EACH stage, extract ALL statuses listed under it with their corresponding numbers.
+Pay attention to statuses that appear in red color - these should be marked as "isHighlighted: true".
+
+Also extract:
+- Hospital name (from the top of the dashboard)
+- Total Claims row (usually at the bottom)
+
+Return ONLY valid JSON in this exact format:
+{
+  "hospitalName": "Hospital Name Here",
+  "extractedAt": "${new Date().toISOString()}",
+  "totalClaims": {
+    "inPatient": 159,
+    "opd": 66,
+    "counts": 225,
+    "enhancement": 0
+  },
+  "stageData": [
+    {
+      "stage": "ESIC Referral",
+      "statuses": [
+        {
+          "status": "Patient Referral",
+          "inPatient": 28,
+          "opd": 65,
+          "counts": 93,
+          "enhancement": 0,
+          "isHighlighted": false
+        },
+        {
+          "status": "Need More Information [Ref]",
+          "inPatient": 0,
+          "opd": 0,
+          "counts": 0,
+          "enhancement": 0,
+          "isHighlighted": true
+        }
+      ]
+    }
+  ],
+  "confidence": 90
+}`
+
+    // Try each model until one works
+    let response: Response | null = null
+    let lastError = ''
+
+    for (const model of GEMINI_MODELS) {
+      try {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      inlineData: {
+                        mimeType: mimeType,
+                        data: base64Data,
+                      },
+                    },
+                    {
+                      text: prompt,
+                    },
+                  ],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.1,
+                topK: 32,
+                topP: 1,
+                maxOutputTokens: 8192,
+              },
+            }),
+          }
+        )
+
+        if (response.ok) {
+          console.log(`Successfully used model for ESIC extraction: ${model}`)
+          break
+        } else {
+          lastError = `${model}: ${response.status}`
+          console.warn(`Model ${model} failed with status ${response.status}, trying next...`)
+          response = null
+        }
+      } catch (err) {
+        lastError = `${model}: ${err instanceof Error ? err.message : 'Unknown error'}`
+        console.warn(`Model ${model} error:`, err)
+      }
+    }
+
+    if (!response || !response.ok) {
+      return {
+        success: false,
+        data: null,
+        error: `All Gemini models failed. Last error: ${lastError}`,
+        confidence: 0
+      }
+    }
+
+    const result = await response.json()
+    const textContent = result.candidates?.[0]?.content?.parts?.[0]?.text
+
+    if (!textContent) {
+      return {
+        success: false,
+        data: null,
+        error: 'No response from Gemini API',
+        confidence: 0
+      }
+    }
+
+    // Parse the JSON from the response
+    let jsonStr = textContent
+
+    // Remove markdown code blocks if present
+    const jsonMatch = textContent.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1].trim()
+    }
+
+    try {
+      const extractedData = JSON.parse(jsonStr) as ESICClaimsData & { confidence: number }
+      return {
+        success: true,
+        data: {
+          hospitalName: extractedData.hospitalName || 'Unknown Hospital',
+          extractedAt: extractedData.extractedAt || new Date().toISOString(),
+          totalClaims: extractedData.totalClaims || { inPatient: 0, opd: 0, counts: 0, enhancement: 0 },
+          stageData: extractedData.stageData || []
+        },
+        error: null,
+        confidence: extractedData.confidence || 80
+      }
+    } catch (parseError) {
+      console.error('ESIC JSON parse error:', parseError, 'Raw response:', textContent)
+      return {
+        success: false,
+        data: null,
+        error: 'Failed to parse ESIC extraction result',
+        confidence: 0
+      }
+    }
+  } catch (error) {
+    console.error('ESIC Gemini extraction error:', error)
+    return {
+      success: false,
+      data: null,
+      error: error instanceof Error ? error.message : 'Unknown error during ESIC extraction',
+      confidence: 0
+    }
+  }
+}
+
 // Legacy function for single record extraction
 export async function extractDataFromImage(file: File): Promise<GeminiExtractionResult> {
   if (!GEMINI_API_KEY) {

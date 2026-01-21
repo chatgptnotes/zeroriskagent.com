@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react'
 import { useUploads, useUploadFile, useDeleteUpload } from '../hooks/useUpload'
 import { formatFileSize } from '../services/upload.service'
-import { extractAllRecordsFromImage, ClaimRecord } from '../services/gemini.service'
+import { extractAllRecordsFromImage, ClaimRecord, extractESICClaimsFromImage, ESICClaimsData } from '../services/gemini.service'
+import { supabase } from '../lib/supabase'
 
 export default function Upload() {
   const [isDragging, setIsDragging] = useState(false)
@@ -11,6 +12,8 @@ export default function Upload() {
   const [extractedRecords, setExtractedRecords] = useState<ClaimRecord[]>([])
   const [extractionConfidence, setExtractionConfidence] = useState<number>(0)
   const [extractionError, setExtractionError] = useState<string | null>(null)
+  const [esicData, setEsicData] = useState<ESICClaimsData | null>(null)
+  const [isESICDashboard, setIsESICDashboard] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: uploadsData, isLoading: uploadsLoading } = useUploads()
@@ -66,6 +69,8 @@ export default function Upload() {
     setExtractedRecords([])
     setExtractionConfidence(0)
     setExtractionError(null)
+    setEsicData(null)
+    setIsESICDashboard(false)
 
     // Create image preview
     const reader = new FileReader()
@@ -74,15 +79,30 @@ export default function Upload() {
     }
     reader.readAsDataURL(file)
 
-    // Extract all records from image using Gemini
+    // Try to detect if this is an ESIC dashboard first
     setIsExtracting(true)
     try {
-      const result = await extractAllRecordsFromImage(file)
-      if (result.success && result.records.length > 0) {
-        setExtractedRecords(result.records)
-        setExtractionConfidence(result.confidence)
+      // First attempt ESIC extraction
+      const esicResult = await extractESICClaimsFromImage(file)
+      
+      if (esicResult.success && esicResult.data && esicResult.data.stageData.length > 0) {
+        // This looks like an ESIC dashboard
+        setIsESICDashboard(true)
+        setEsicData(esicResult.data)
+        setExtractionConfidence(esicResult.confidence)
+        
+        // Save to database
+        await saveESICDataToDatabase(esicResult.data)
       } else {
-        setExtractionError(result.error || 'No records found in image')
+        // Fall back to general record extraction
+        setIsESICDashboard(false)
+        const result = await extractAllRecordsFromImage(file)
+        if (result.success && result.records.length > 0) {
+          setExtractedRecords(result.records)
+          setExtractionConfidence(result.confidence)
+        } else {
+          setExtractionError(result.error || 'No records found in image')
+        }
       }
     } catch (error) {
       setExtractionError(error instanceof Error ? error.message : 'Extraction failed')
@@ -95,12 +115,37 @@ export default function Upload() {
     fileInputRef.current?.click()
   }
 
+  // Save ESIC data to database
+  const saveESICDataToDatabase = async (data: ESICClaimsData) => {
+    try {
+      const { error } = await supabase
+        .from('esic_claims_extractions')
+        .insert({
+          hospital_name: data.hospitalName,
+          extracted_at: data.extractedAt,
+          total_claims: data.totalClaims,
+          stage_data: data.stageData,
+          created_at: new Date().toISOString()
+        })
+
+      if (error) {
+        console.error('Error saving ESIC data:', error)
+      } else {
+        console.log('ESIC data saved successfully')
+      }
+    } catch (error) {
+      console.error('Error saving ESIC data:', error)
+    }
+  }
+
   const handleClearFile = () => {
     setSelectedFile(null)
     setImagePreview(null)
     setExtractedRecords([])
     setExtractionConfidence(0)
     setExtractionError(null)
+    setEsicData(null)
+    setIsESICDashboard(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -117,6 +162,8 @@ export default function Upload() {
       setExtractedRecords([])
       setExtractionConfidence(0)
       setExtractionError(null)
+      setEsicData(null)
+      setIsESICDashboard(false)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -198,9 +245,9 @@ export default function Upload() {
         </div>
 
         {/* Main Content - Two Column Layout when data extracted */}
-        <div className={`grid gap-6 ${extractedRecords.length > 0 ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 max-w-4xl'}`}>
+        <div className={`grid gap-6 ${(extractedRecords.length > 0 || esicData) ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 max-w-4xl'}`}>
           {/* Left Column - Upload Area */}
-          <div className={extractedRecords.length > 0 ? 'lg:col-span-1' : ''}>
+          <div className={(extractedRecords.length > 0 || esicData) ? 'lg:col-span-1' : ''}>
             <div className="card">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <span className="material-icon text-primary-600">cloud_upload</span>
@@ -333,8 +380,30 @@ export default function Upload() {
                 </div>
               )}
 
-              {/* Extraction Success Summary */}
-              {extractedRecords.length > 0 && !isExtracting && (
+              {/* ESIC Extraction Success Summary */}
+              {esicData && isESICDashboard && !isExtracting && (
+                <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="material-icon text-green-600" style={{ fontSize: '20px' }}>account_balance</span>
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          ESIC Dashboard extracted
+                        </p>
+                        <p className="text-xs text-green-700">
+                          {esicData.hospitalName} • {esicData.totalClaims.counts} total claims
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
+                      {extractionConfidence}% confidence
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Regular Extraction Success Summary */}
+              {extractedRecords.length > 0 && !isESICDashboard && !isExtracting && (
                 <div className="mt-4 p-3 bg-green-50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -374,8 +443,81 @@ export default function Upload() {
             </div>
           </div>
 
-          {/* Right Column - Extracted Data Table */}
-          {extractedRecords.length > 0 && (
+          {/* Right Column - ESIC Dashboard Data */}
+          {esicData && isESICDashboard && (
+            <div className="lg:col-span-2">
+              <div className="card">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <span className="material-icon text-primary-600">account_balance</span>
+                    ESIC Dashboard Data
+                  </h2>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-500">
+                      {esicData.hospitalName}
+                    </span>
+                    <a 
+                      href="/dashboard/super-admin" 
+                      className="text-xs bg-primary-600 text-white px-3 py-1.5 rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-1"
+                    >
+                      <span className="material-icon" style={{ fontSize: '14px' }}>dashboard</span>
+                      View in Dashboard
+                    </a>
+                  </div>
+                </div>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-xs text-blue-600 font-medium">In Patient</p>
+                    <p className="text-lg font-bold text-blue-800">{esicData.totalClaims.inPatient}</p>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded-lg">
+                    <p className="text-xs text-green-600 font-medium">OPD</p>
+                    <p className="text-lg font-bold text-green-800">{esicData.totalClaims.opd}</p>
+                  </div>
+                  <div className="bg-purple-50 p-3 rounded-lg">
+                    <p className="text-xs text-purple-600 font-medium">Total Counts</p>
+                    <p className="text-lg font-bold text-purple-800">{esicData.totalClaims.counts}</p>
+                  </div>
+                  <div className="bg-orange-50 p-3 rounded-lg">
+                    <p className="text-xs text-orange-600 font-medium">Enhancement</p>
+                    <p className="text-lg font-bold text-orange-800">{esicData.totalClaims.enhancement}</p>
+                  </div>
+                </div>
+
+                {/* Stage Preview */}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-gray-700">Stages Overview</h3>
+                  <div className="max-h-60 overflow-y-auto space-y-2">
+                    {esicData.stageData.map((stage, index) => (
+                      <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-800">{stage.stage}</span>
+                          <span className="text-xs text-gray-500">{stage.statuses.length} statuses</span>
+                        </div>
+                        {/* Show first status as preview */}
+                        {stage.statuses.length > 0 && (
+                          <div className="mt-1 text-xs text-gray-600">
+                            {stage.statuses[0].status}: {stage.statuses[0].counts} claims
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action Footer */}
+                <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+                  <span>Data extracted from ESIC dashboard</span>
+                  <span className="text-green-600">✓ Saved to database</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Right Column - Regular Extracted Data Table */}
+          {extractedRecords.length > 0 && !isESICDashboard && (
             <div className="lg:col-span-2">
               <div className="card">
                 <div className="flex items-center justify-between mb-4">
