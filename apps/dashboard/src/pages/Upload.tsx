@@ -133,58 +133,6 @@ export default function Upload() {
     fileInputRef.current?.click()
   }
 
-  // Save NMI data to database
-  const saveNMIDataToDatabase = async (records: NMICaseRecord[], hospitalName: string) => {
-    try {
-      const { error } = await supabase
-        .from('nmi_cases')
-        .insert(
-          records.map(record => ({
-            sr: record.sr,
-            claim_id: record.id,
-            admit_no: record.admitNo,
-            card_id: record.cardId,
-            patient_name: record.patientName,
-            claim_amount: typeof record.claimAmt === 'string' ? parseFloat(record.claimAmt.replace(/,/g, '')) : record.claimAmt,
-            approved_amount: typeof record.approvedAmt === 'string' ? parseFloat(record.approvedAmt.replace(/,/g, '')) : record.approvedAmt,
-            reverted_back_on: record.revertedBackOn,
-            hospital_name: hospitalName,
-            created_at: new Date().toISOString()
-          }))
-        )
-
-      if (error) {
-        console.error('Error saving NMI data:', error)
-      } else {
-        console.log('NMI data saved successfully')
-      }
-    } catch (error) {
-      console.error('Error saving NMI data:', error)
-    }
-  }
-
-  // Save ESIC data to database
-  const saveESICDataToDatabase = async (data: ESICClaimsData) => {
-    try {
-      const { error } = await supabase
-        .from('esic_claims_extractions')
-        .insert({
-          hospital_name: data.hospitalName,
-          extracted_at: data.extractedAt,
-          total_claims: data.totalClaims,
-          stage_data: data.stageData,
-          created_at: new Date().toISOString()
-        })
-
-      if (error) {
-        console.error('Error saving ESIC data:', error)
-      } else {
-        console.log('ESIC data saved successfully')
-      }
-    } catch (error) {
-      console.error('Error saving ESIC data:', error)
-    }
-  }
 
   const handleClearFile = () => {
     setSelectedFile(null)

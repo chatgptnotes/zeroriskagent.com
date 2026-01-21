@@ -108,9 +108,7 @@ export default function SuperAdminDashboard() {
   const [searchId, setSearchId] = useState('')
   const [esicData, setEsicData] = useState<ESICClaimsData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [tempData, setTempData] = useState<ESICClaimsData | null>(null)
-  const [isUsingTempData, setIsUsingTempData] = useState(false)
   const [availableDates, setAvailableDates] = useState<string[]>([])
   const [selectedDate, setSelectedDate] = useState<string>('')
 
@@ -169,7 +167,6 @@ export default function SuperAdminDashboard() {
         console.log('Temp data saved successfully:', data)
         setEsicData(tempData)
         setTempData(null)
-        setIsUsingTempData(false)
         // Refresh available dates
         fetchAvailableDates()
         alert('Data saved to database successfully!')
@@ -237,7 +234,6 @@ export default function SuperAdminDashboard() {
       }
     } catch (err) {
       console.error('Error fetching ESIC data by date:', err)
-      setError('Failed to load data for selected date')
     } finally {
       setLoading(false)
     }
@@ -273,7 +269,6 @@ export default function SuperAdminDashboard() {
       }
     } catch (err) {
       console.error('Error fetching ESIC data:', err)
-      setError('Failed to load dashboard data')
     } finally {
       setLoading(false)
     }
