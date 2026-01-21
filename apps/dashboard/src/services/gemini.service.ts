@@ -492,6 +492,209 @@ Return ONLY valid JSON in this exact format:
   }
 }
 
+// NMI (Need More Info) Case Record from ESIC Dashboard
+export interface NMICaseRecord {
+  sr: number | string
+  id: string
+  admitNo: string
+  cardId: string
+  patientName: string
+  claimAmt: number | string
+  approvedAmt: number | string
+  revertedBackOn: string
+}
+
+export interface NMIExtractionResult {
+  success: boolean
+  records: NMICaseRecord[]
+  totalCount: number
+  confidence: number
+  hospitalName: string
+  pageInfo?: string
+  error: string | null
+}
+
+// Extract NMI (Need More Info) Cases from ESIC Dashboard image
+export async function extractNMICasesFromImage(file: File): Promise<NMIExtractionResult> {
+  if (!GEMINI_API_KEY) {
+    return {
+      success: false,
+      records: [],
+      totalCount: 0,
+      confidence: 0,
+      hospitalName: '',
+      error: 'Gemini API key not configured',
+    }
+  }
+
+  try {
+    const base64Data = await fileToBase64(file)
+    const mimeType = file.type || 'image/jpeg'
+
+    const prompt = `This image shows an ESIC Bill Processing Agency dashboard displaying "Need More Info Cases" table.
+
+Extract ALL rows from the table with these EXACT columns:
+- Sr. (Serial number)
+- ID (numeric claim ID, shown in yellow/link color)
+- Admit No. (admission number like IH25D12009)
+- Card ID (like 2302791383)
+- Patient Name (full name with title like "Mr. Kailash Zha")
+- Claim Amt (claim amount in rupees, numeric)
+- Approved Amt (approved amount, usually 0)
+- Reverted Back On (date and time like "18-Jan-2026 15:58")
+
+Also extract:
+- Hospital name from the top (e.g., "HOPE HOSPITAL NAGPUR SST")
+- Page info if visible (e.g., "Page 1 of 2")
+
+IMPORTANT:
+- Extract EVERY visible row from the table
+- Keep the ID values exactly as shown (they are claim IDs)
+- Keep amounts as numbers without currency symbols
+- Keep dates in their original format
+
+Return ONLY valid JSON in this exact format:
+{
+  "hospitalName": "HOPE HOSPITAL NAGPUR SST",
+  "pageInfo": "Page 1 of 2",
+  "records": [
+    {
+      "sr": 1,
+      "id": "6751130",
+      "admitNo": "IH25D12009",
+      "cardId": "2302791383",
+      "patientName": "Mr. Kailash Zha",
+      "claimAmt": 230401,
+      "approvedAmt": 0,
+      "revertedBackOn": "18-Jan-2026 15:58"
+    }
+  ],
+  "totalCount": 25,
+  "confidence": 92
+}`
+
+    // Try each model until one works
+    let response: Response | null = null
+    let lastError = ''
+
+    for (const model of GEMINI_MODELS) {
+      try {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      inlineData: {
+                        mimeType: mimeType,
+                        data: base64Data,
+                      },
+                    },
+                    {
+                      text: prompt,
+                    },
+                  ],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.1,
+                topK: 32,
+                topP: 1,
+                maxOutputTokens: 8192,
+              },
+            }),
+          }
+        )
+
+        if (response.ok) {
+          console.log(`Successfully used model for NMI extraction: ${model}`)
+          break
+        } else {
+          lastError = `${model}: ${response.status}`
+          console.warn(`Model ${model} failed with status ${response.status}, trying next...`)
+          response = null
+        }
+      } catch (err) {
+        lastError = `${model}: ${err instanceof Error ? err.message : 'Unknown error'}`
+        console.warn(`Model ${model} error:`, err)
+      }
+    }
+
+    if (!response || !response.ok) {
+      return {
+        success: false,
+        records: [],
+        totalCount: 0,
+        confidence: 0,
+        hospitalName: '',
+        error: `All Gemini models failed. Last error: ${lastError}`,
+      }
+    }
+
+    const result = await response.json()
+    const textContent = result.candidates?.[0]?.content?.parts?.[0]?.text
+
+    if (!textContent) {
+      return {
+        success: false,
+        records: [],
+        totalCount: 0,
+        confidence: 0,
+        hospitalName: '',
+        error: 'No response from Gemini API',
+      }
+    }
+
+    // Parse the JSON from the response
+    let jsonStr = textContent
+
+    // Remove markdown code blocks if present
+    const jsonMatch = textContent.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1].trim()
+    }
+
+    try {
+      const extractedData = JSON.parse(jsonStr)
+      return {
+        success: true,
+        records: extractedData.records || [],
+        totalCount: extractedData.totalCount || extractedData.records?.length || 0,
+        confidence: extractedData.confidence || 80,
+        hospitalName: extractedData.hospitalName || '',
+        pageInfo: extractedData.pageInfo,
+        error: null,
+      }
+    } catch (parseError) {
+      console.error('NMI JSON parse error:', parseError, 'Raw response:', textContent)
+      return {
+        success: false,
+        records: [],
+        totalCount: 0,
+        confidence: 0,
+        hospitalName: '',
+        error: 'Failed to parse NMI extraction result',
+      }
+    }
+  } catch (error) {
+    console.error('NMI Gemini extraction error:', error)
+    return {
+      success: false,
+      records: [],
+      totalCount: 0,
+      confidence: 0,
+      hospitalName: '',
+      error: error instanceof Error ? error.message : 'Unknown error during NMI extraction',
+    }
+  }
+}
+
 // Legacy function for single record extraction
 export async function extractDataFromImage(file: File): Promise<GeminiExtractionResult> {
   if (!GEMINI_API_KEY) {
