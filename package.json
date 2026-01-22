@@ -1,6 +1,6 @@
 {
   "name": "zeroriskagent.com",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Autonomous Healthcare Revenue Recovery Agent for Indian Hospitals",
   "private": true,
   "scripts": {
