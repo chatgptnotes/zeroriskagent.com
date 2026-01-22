@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "pnpm --filter dashboard dev",
     "agent:dev": "pnpm --filter agent dev",
-    "build": "pnpm -r build",
+    "build": "pnpm --filter dashboard build",
+    "build:all": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
     "lint:fix": "pnpm -r lint:fix",
